@@ -379,7 +379,7 @@ function openDetailModal(record, displayUrl) {
   activeInspectionRecord = record;
   detailImage.src = record.cloudUrl || displayUrl;
 
-  const timestampVal = record.capturedAt || record.timestamp;
+  const timestampVal = record.capturedAt || record.timestamp || Date.now();
   detailDate.textContent = new Date(timestampVal).toLocaleString('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short'
@@ -407,18 +407,22 @@ function openDetailModal(record, displayUrl) {
 
   const isOwner = currentUser && (!record.authorId || record.authorId === currentUser.uid);
 
+  // Consider an item synced if flagged locally OR if it has a CDN cloud URL from Firestore
+  const isAlreadySynced = Boolean(record.syncedToFirestore || record.cloudUrl);
+  const isAlreadyPublic = Boolean(record.isPublic || record.publishedAt);
+
   if (isOwner) {
     btnDeleteEntry.classList.remove('hidden');
     btnCloudSync.classList.remove('hidden');
 
-    if (record.syncedToFirestore && record.cloudUrl) {
+    if (isAlreadySynced && record.cloudUrl) {
       btnCloudSync.classList.add('synced');
       syncIcon.textContent = '✓';
       syncStatus.textContent = 'Synced to Cloud';
       btnCloudSync.disabled = true;
 
       btnPublishFeed.classList.remove('hidden');
-      if (record.isPublic) {
+      if (isAlreadyPublic) {
         btnPublishFeed.classList.add('published');
         publishIcon.textContent = '🔒';
         publishText.textContent = 'Make Private';
@@ -430,7 +434,7 @@ function openDetailModal(record, displayUrl) {
     } else {
       btnCloudSync.classList.remove('synced');
       syncIcon.textContent = '☁️';
-      syncStatus.textContent = record.cloudUrl ? 'Sync to Database' : 'Backup to Cloud';
+      syncStatus.textContent = 'Backup to Cloud';
       btnCloudSync.disabled = false;
       btnPublishFeed.classList.add('hidden');
     }
@@ -442,6 +446,7 @@ function openDetailModal(record, displayUrl) {
 
   detailModal.classList.remove('hidden');
 }
+
 
 function closeDetailModalUI() {
   detailModal.classList.add('hidden');
@@ -542,6 +547,77 @@ btnPublishFeed.addEventListener('click', async () => {
     btnPublishFeed.disabled = false;
   }
 });
+function openDetailModal(record, displayUrl) {
+  activeInspectionRecord = record;
+  detailImage.src = record.cloudUrl || displayUrl;
+
+  const timestampVal = record.capturedAt || record.timestamp || Date.now();
+  detailDate.textContent = new Date(timestampVal).toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+
+  const category = NATURE_CATEGORIES.find((c) => c.id === record.category);
+  detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${category ? category.label : 'Observation'}`;
+  detailSpecs.textContent = `${record.aspectRatio || '4:3'} • ${record.filter || 'natural'} • ${record.frame || 'raw'}`;
+
+  // Interactive author button in detail view
+  if (record.authorName && record.authorId) {
+    detailAuthorName.textContent = `@${record.authorName}`;
+    btnDetailAuthor.classList.remove('hidden');
+    btnDetailAuthor.onclick = () => openObserverFolio(record.authorId, record.authorName);
+  } else {
+    btnDetailAuthor.classList.add('hidden');
+  }
+
+  if (record.caption && record.caption.trim().length > 0) {
+    detailCaption.textContent = `“${record.caption}”`;
+    detailCaption.classList.remove('hidden');
+  } else {
+    detailCaption.classList.add('hidden');
+  }
+
+  const isOwner = currentUser && (!record.authorId || record.authorId === currentUser.uid);
+
+  // Consider an item synced if flagged locally OR if it has a CDN cloud URL from Firestore
+  const isAlreadySynced = Boolean(record.syncedToFirestore || record.cloudUrl);
+  const isAlreadyPublic = Boolean(record.isPublic || record.publishedAt);
+
+  if (isOwner) {
+    btnDeleteEntry.classList.remove('hidden');
+    btnCloudSync.classList.remove('hidden');
+
+    if (isAlreadySynced && record.cloudUrl) {
+      btnCloudSync.classList.add('synced');
+      syncIcon.textContent = '✓';
+      syncStatus.textContent = 'Synced to Cloud';
+      btnCloudSync.disabled = true;
+
+      btnPublishFeed.classList.remove('hidden');
+      if (isAlreadyPublic) {
+        btnPublishFeed.classList.add('published');
+        publishIcon.textContent = '🔒';
+        publishText.textContent = 'Make Private';
+      } else {
+        btnPublishFeed.classList.remove('published');
+        publishIcon.textContent = '🌍';
+        publishText.textContent = 'Share to Field';
+      }
+    } else {
+      btnCloudSync.classList.remove('synced');
+      syncIcon.textContent = '☁️';
+      syncStatus.textContent = 'Backup to Cloud';
+      btnCloudSync.disabled = false;
+      btnPublishFeed.classList.add('hidden');
+    }
+  } else {
+    btnDeleteEntry.classList.add('hidden');
+    btnCloudSync.classList.add('hidden');
+    btnPublishFeed.classList.add('hidden');
+  }
+
+  detailModal.classList.remove('hidden');
+}
 
 
 // ---------------- AUTH & SYNC ----------------
@@ -744,22 +820,39 @@ btnCloudSync.addEventListener('click', async () => {
 btnDeleteEntry.addEventListener('click', async () => {
   if (!activeInspectionRecord) return;
 
+  btnDeleteEntry.disabled = true;
+
   try {
     const user = AuthManager.getCurrentUser();
-    if (user && activeInspectionRecord.syncedToFirestore) {
+    const isCloudRecord = Boolean(
+      activeInspectionRecord.syncedToFirestore ||
+      activeInspectionRecord.cloudUrl ||
+      (activeInspectionRecord.authorId && user && activeInspectionRecord.authorId === user.uid)
+    );
+
+    // 1. Purge from Firestore (both private and public collections)
+    if (user && isCloudRecord) {
       await CloudJournal.deleteFromCloud(user.uid, activeInspectionRecord.id);
     }
 
+    // 2. Purge from local IndexedDB
     await JournalStore.deleteObservation(activeInspectionRecord.id);
+
+    // 3. Remove from in-memory arrays immediately
+    allObservations = allObservations.filter((o) => o.id !== activeInspectionRecord.id);
+    communityFeedItems = communityFeedItems.filter((o) => o.id !== activeInspectionRecord.id);
+
     history.back();
     showToast('Observation deleted');
-    allObservations = await JournalStore.getAllObservations();
     renderStreamGrid();
   } catch (err) {
     console.error('Delete failed:', err);
-    showToast('Failed to delete');
+    showToast(`Delete failed: ${err.message || 'Error'}`);
+  } finally {
+    btnDeleteEntry.disabled = false;
   }
 });
+
 
 // ---------------- INITIALIZATION & HARDWARE ----------------
 

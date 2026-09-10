@@ -23,7 +23,7 @@ export class CloudJournal {
 
     const docRef = doc(db, 'users', userId, 'observations', record.id);
 
-    const cloudPayload = {
+        const cloudPayload = {
       id: record.id,
       category: record.category || 'plants',
       caption: record.caption || '',
@@ -32,10 +32,12 @@ export class CloudJournal {
       frame: record.frame || 'none',
       cloudUrl: record.cloudUrl || null,
       publicId: record.publicId || null,
-      capturedAt: record.timestamp,
+      // Prevents Firestore crash when timestamp is undefined
+      capturedAt: record.timestamp || record.capturedAt || Date.now(),
       syncedAt: serverTimestamp(),
       isPublic: record.isPublic || false
     };
+
 
     try {
       await setDoc(docRef, cloudPayload, { merge: true });
