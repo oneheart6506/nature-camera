@@ -8,6 +8,7 @@ import {
   collection,
   getDocs,
   query,
+  where,
   orderBy,
   limit,
   serverTimestamp
@@ -15,9 +16,6 @@ import {
 import { db } from '../../constants/firebase.js';
 
 export class CloudJournal {
-  /**
-   * Syncs an observation record to the user's private Firestore collection.
-   */
   static async syncObservation(userId, record) {
     if (!userId) {
       throw new Error('User must be authenticated to sync with cloud.');
@@ -48,9 +46,6 @@ export class CloudJournal {
     }
   }
 
-  /**
-   * Publishes or unpublishes an observation to the global community feed.
-   */
   static async setPublicStatus(userId, userEmail, record, isPublic) {
     if (!userId) throw new Error('Sign in required to publish.');
     if (!record.cloudUrl) throw new Error('Photo must be cloud-backed before publishing.');
@@ -80,9 +75,6 @@ export class CloudJournal {
     }
   }
 
-  /**
-   * Fetches the latest community observations.
-   */
   static async getPublicFeed(maxRecords = 30) {
     try {
       const publicCol = collection(db, 'public_observations');
@@ -99,8 +91,31 @@ export class CloudJournal {
   }
 
   /**
-   * Fetches private cloud observations for the authenticated user.
+   * Fetches all public contributions from a specific author.
    */
+  static async getObserverPublicFolio(authorId) {
+    if (!authorId) return [];
+
+    try {
+      const publicCol = collection(db, 'public_observations');
+      const q = query(publicCol, where('authorId', '==', authorId));
+      const snapshot = await getDocs(q);
+
+      const folio = [];
+      snapshot.forEach((d) => folio.push(d.data()));
+
+      // Sort newest first in memory
+      return folio.sort((a, b) => {
+        const timeA = a.capturedAt || 0;
+        const timeB = b.capturedAt || 0;
+        return timeB - timeA;
+      });
+    } catch (error) {
+      console.error('Failed to load observer folio:', error);
+      throw error;
+    }
+  }
+
   static async fetchUserObservations(userId) {
     if (!userId) return [];
 
@@ -121,16 +136,11 @@ export class CloudJournal {
     }
   }
 
-  /**
-   * Deletes an observation document from private storage and public feed.
-   */
   static async deleteFromCloud(userId, observationId) {
     if (!userId || !observationId) return;
 
     try {
-      // 1. Remove from private collection
       await deleteDoc(doc(db, 'users', userId, 'observations', observationId));
-      // 2. Remove from public stream if present
       await deleteDoc(doc(db, 'public_observations', observationId));
     } catch (error) {
       console.error('Failed to purge cloud document:', error);

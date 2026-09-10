@@ -301,3 +301,93 @@
   border-color: var(--color-sunlight);
   color: var(--color-sunlight);
 }
+
+
+/* Interactive Author Tag */
+.obs-meta-author {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-forest-700);
+  background: var(--color-bg-base);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-bg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+  cursor: pointer;
+}
+
+.detail-author-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--color-camera-ui);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  cursor: pointer;
+}
+
+/* Fullscreen Naturalist Folio Modal */
+.folio-modal {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg-base);
+  color: var(--color-forest-900);
+  display: flex;
+  flex-direction: column;
+  z-index: 70;
+  overflow: hidden;
+}
+
+.folio-header {
+  padding-top: calc(var(--space-4) + var(--safe-top));
+  padding-bottom: var(--space-3);
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-bg-subtle);
+  background-color: var(--color-bg-base);
+}
+
+.folio-identity-hero {
+  padding: var(--space-5) var(--space-4);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-bg-subtle);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.folio-avatar {
+  width: 52px;
+  height: 52px;
+  background: var(--color-forest-900);
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.folio-details h2 {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.folio-details p {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-forest-600);
+}

@@ -238,24 +238,16 @@
         </div>
 
         <footer class="detail-footer">
-          <div class="detail-info">
-            <span
-              id="detail-category-label"
-              class="detail-title"
-            >
-              Observation
-            </span>
-
-            <span
-              id="detail-specs"
-              class="detail-sub"
-            ></span>
-
-            <p
-              id="detail-caption"
-              class="detail-caption hidden"
-            ></p>
+                    <div class="detail-info">
+            <span id="detail-category-label" class="detail-title">Observation</span>
+            <span id="detail-specs" class="detail-sub"></span>
+            <button id="btn-detail-author" class="detail-author-btn hidden">
+              <span>👤</span>
+              <span id="detail-author-name">@observer</span>
+            </button>
+            <p id="detail-caption" class="detail-caption hidden"></p>
           </div>
+
 
                     <div class="detail-actions-row">
             <button id="btn-cloud-sync" class="btn-cloud-sync">
@@ -274,6 +266,32 @@
 
         </footer>
       </section>
+
+
+            <!-- NATURALIST FOLIO MODAL -->
+      <section id="folio-modal" class="folio-modal hidden">
+        <header class="folio-header">
+          <button id="btn-close-folio" class="btn-pill" aria-label="Back">
+            Back
+          </button>
+          <span class="camera-tag">Observer Folio</span>
+          <div style="width: 44px;"></div>
+        </header>
+
+        <!-- Folio Hero -->
+        <div class="folio-identity-hero">
+          <div class="folio-avatar">🌿</div>
+          <div class="folio-details">
+            <h2 id="folio-author-handle">@naturalist</h2>
+            <p id="folio-observation-count">Field Notes: 0 moments</p>
+          </div>
+        </div>
+
+        <main class="journal-content">
+          <div id="folio-grid" class="observations-grid"></div>
+        </main>
+      </section>
+
 
       <!-- AUTHENTICATION / ACCOUNT MODAL -->
       <div id="auth-modal" class="auth-modal hidden">

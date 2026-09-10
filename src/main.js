@@ -33,7 +33,7 @@ const btnRetry = document.getElementById('btn-retry');
 const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toast-msg');
 
-// DOM Elements - Journal & Modal
+// DOM Elements - Journal & Inspector
 const btnOpenJournal = document.getElementById('btn-open-journal');
 const journalView = document.getElementById('journal-view');
 const btnCloseJournal = document.getElementById('btn-close-journal');
@@ -49,6 +49,8 @@ const detailDate = document.getElementById('detail-date');
 const detailCategoryLabel = document.getElementById('detail-category-label');
 const detailSpecs = document.getElementById('detail-specs');
 const detailCaption = document.getElementById('detail-caption');
+const btnDetailAuthor = document.getElementById('btn-detail-author');
+const detailAuthorName = document.getElementById('detail-author-name');
 const btnCloudSync = document.getElementById('btn-cloud-sync');
 const syncIcon = document.getElementById('sync-icon');
 const syncStatus = document.getElementById('sync-status');
@@ -56,6 +58,13 @@ const btnPublishFeed = document.getElementById('btn-publish-feed');
 const publishIcon = document.getElementById('publish-icon');
 const publishText = document.getElementById('publish-text');
 const btnDeleteEntry = document.getElementById('btn-delete-entry');
+
+// DOM Elements - Folio Modal
+const folioModal = document.getElementById('folio-modal');
+const btnCloseFolio = document.getElementById('btn-close-folio');
+const folioAuthorHandle = document.getElementById('folio-author-handle');
+const folioObservationCount = document.getElementById('folio-observation-count');
+const folioGrid = document.getElementById('folio-grid');
 
 // DOM Elements - Auth
 const btnAuthStatus = document.getElementById('btn-auth-status');
@@ -85,13 +94,14 @@ let currentPhotoBlob = null;
 let currentPhotoUrl = null;
 let toastTimeout = null;
 
-// Journal, Feed & Auth State
-let currentStreamMode = 'personal'; // 'personal' | 'community'
+// Journal, Feed, Folio & Auth State
+let currentStreamMode = 'personal';
 let activeGalleryCategory = 'all';
 let allObservations = [];
 let communityFeedItems = [];
 let activeInspectionRecord = null;
 let createdGalleryUrls = [];
+let createdFolioUrls = [];
 let authMode = 'login';
 let currentUser = null;
 
@@ -230,6 +240,11 @@ function cleanupGalleryUrls() {
   createdGalleryUrls = [];
 }
 
+function cleanupFolioUrls() {
+  createdFolioUrls.forEach((url) => URL.revokeObjectURL(url));
+  createdFolioUrls = [];
+}
+
 function renderJournalCategories() {
   journalCategories.innerHTML = '';
 
@@ -302,10 +317,19 @@ function renderStreamGrid() {
         <img src="${displayUrl}" alt="Nature observation" loading="lazy" />
       </div>
       <div class="obs-meta">
-        ${currentStreamMode === 'community' && obs.authorName ? `<span class="obs-meta-author">@${obs.authorName}</span>` : `<span class="obs-meta-time">${formattedTime}</span>`}
+        ${currentStreamMode === 'community' && obs.authorName ? `<span class="obs-meta-author" data-author-id="${obs.authorId}" data-author-name="${obs.authorName}">@${obs.authorName}</span>` : `<span class="obs-meta-time">${formattedTime}</span>`}
         <span class="obs-meta-category">${catIcon}</span>
       </div>
     `;
+
+    // Direct tap on author handle in card
+    const authorTag = card.querySelector('.obs-meta-author');
+    if (authorTag) {
+      authorTag.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openObserverFolio(obs.authorId, obs.authorName);
+      });
+    }
 
     card.addEventListener('click', () => {
       history.pushState({ modal: 'detail' }, '');
@@ -362,8 +386,17 @@ function openDetailModal(record, displayUrl) {
   });
 
   const category = NATURE_CATEGORIES.find((c) => c.id === record.category);
-  detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${category ? category.label : 'Observation'}${record.authorName ? ` by @${record.authorName}` : ''}`;
+  detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${category ? category.label : 'Observation'}`;
   detailSpecs.textContent = `${record.aspectRatio || '4:3'} • ${record.filter || 'natural'} • ${record.frame || 'raw'}`;
+
+  // Interactive author button in detail view
+  if (record.authorName && record.authorId) {
+    detailAuthorName.textContent = `@${record.authorName}`;
+    btnDetailAuthor.classList.remove('hidden');
+    btnDetailAuthor.onclick = () => openObserverFolio(record.authorId, record.authorName);
+  } else {
+    btnDetailAuthor.classList.add('hidden');
+  }
 
   if (record.caption && record.caption.trim().length > 0) {
     detailCaption.textContent = `“${record.caption}”`;
@@ -372,21 +405,18 @@ function openDetailModal(record, displayUrl) {
     detailCaption.classList.add('hidden');
   }
 
-  // Is this entry owned by the active user?
   const isOwner = currentUser && (!record.authorId || record.authorId === currentUser.uid);
 
   if (isOwner) {
     btnDeleteEntry.classList.remove('hidden');
     btnCloudSync.classList.remove('hidden');
 
-    // Cloud sync state
     if (record.syncedToFirestore && record.cloudUrl) {
       btnCloudSync.classList.add('synced');
       syncIcon.textContent = '✓';
       syncStatus.textContent = 'Synced to Cloud';
       btnCloudSync.disabled = true;
 
-      // Enable community publishing
       btnPublishFeed.classList.remove('hidden');
       if (record.isPublic) {
         btnPublishFeed.classList.add('published');
@@ -405,7 +435,6 @@ function openDetailModal(record, displayUrl) {
       btnPublishFeed.classList.add('hidden');
     }
   } else {
-    // Browsing someone else's observation in "The Wild"
     btnDeleteEntry.classList.add('hidden');
     btnCloudSync.classList.add('hidden');
     btnPublishFeed.classList.add('hidden');
@@ -418,6 +447,57 @@ function closeDetailModalUI() {
   detailModal.classList.add('hidden');
   activeInspectionRecord = null;
   detailImage.src = '';
+}
+
+// ---------------- NATURALIST FOLIO LOGIC ----------------
+
+async function openObserverFolio(authorId, authorName) {
+  history.pushState({ modal: 'folio' }, '');
+  folioAuthorHandle.textContent = `@${authorName}`;
+  folioObservationCount.textContent = 'Retrieving field notes...';
+  folioGrid.innerHTML = '';
+  cleanupFolioUrls();
+
+  folioModal.classList.remove('hidden');
+
+  try {
+    const items = await CloudJournal.getObserverPublicFolio(authorId);
+    folioObservationCount.textContent = `Field Notes: ${items.length} ${items.length === 1 ? 'moment' : 'moments'}`;
+
+    items.forEach((item) => {
+      const card = document.createElement('article');
+      card.className = 'obs-card';
+
+      const thumbUrl = CloudinaryUploader.getOptimizedUrl(item.cloudUrl, 320);
+      const categoryConfig = NATURE_CATEGORIES.find((c) => c.id === item.category);
+      const catIcon = categoryConfig ? categoryConfig.icon : '🌿';
+
+      card.innerHTML = `
+        <div class="obs-thumbnail-wrap">
+          <img src="${thumbUrl}" alt="Nature observation" loading="lazy" />
+        </div>
+        <div class="obs-meta">
+          <span class="obs-meta-time">${new Date(item.capturedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          <span class="obs-meta-category">${catIcon}</span>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        history.pushState({ modal: 'detail' }, '');
+        openDetailModal(item, thumbUrl);
+      });
+
+      folioGrid.appendChild(card);
+    });
+  } catch (err) {
+    folioObservationCount.textContent = 'Could not load folio.';
+    showToast('Failed to load observer notes');
+  }
+}
+
+function closeFolioModalUI() {
+  folioModal.classList.add('hidden');
+  cleanupFolioUrls();
 }
 
 // ---------------- COMMUNITY PUBLISHING ----------------
@@ -519,6 +599,11 @@ function closeAuthModalUI() {
 // ---------------- ANDROID BACK ROUTER ----------------
 
 window.addEventListener('popstate', () => {
+  // Check topmost modal in stack
+  if (!folioModal.classList.contains('hidden')) {
+    closeFolioModalUI();
+    return;
+  }
   if (!authModal.classList.contains('hidden')) {
     closeAuthModalUI();
     return;
@@ -539,6 +624,7 @@ window.addEventListener('popstate', () => {
 
 btnCloseDetail.addEventListener('click', () => history.back());
 btnCloseJournal.addEventListener('click', () => history.back());
+btnCloseFolio.addEventListener('click', () => history.back());
 btnRetake.addEventListener('click', () => history.back());
 btnCloseAuth.addEventListener('click', () => history.back());
 btnAuthStatus.addEventListener('click', openAuthModal);
@@ -629,8 +715,6 @@ btnCloudSync.addEventListener('click', async () => {
     btnCloudSync.classList.add('synced');
     syncIcon.textContent = '✓';
     syncStatus.textContent = 'Synced to Cloud';
-    
-    // Reveal publish button
     btnPublishFeed.classList.remove('hidden');
     showToast('Observation written to Firestore!');
   } catch (err) {
