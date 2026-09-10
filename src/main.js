@@ -927,7 +927,7 @@ if (document.readyState === 'loading') {
 
 // ---------------- SERVICE WORKER ----------------
 
-if ('serviceWorker' in navigator) {
+/*if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
@@ -936,7 +936,7 @@ if ('serviceWorker' in navigator) {
       console.error('Service Worker registration failed:', err);
     }
   });
-}
+}*/
 
 window.addEventListener('offline', () => {
   showToast('Offline — Field Mode active', 3000);
