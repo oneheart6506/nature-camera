@@ -407,10 +407,12 @@ btnFlip.addEventListener('click', async () => {
     updatePreviewMirror();
   } catch (err) {
     console.error('Failed to flip camera:', err);
+    showToast(`Lens error: ${err.name || 'Sensor busy'}`, 3500);
   } finally {
     btnFlip.disabled = false;
   }
 });
+
 
 btnGridToggle.addEventListener('click', () => {
   const isHidden = cameraGrid.classList.toggle('hidden');

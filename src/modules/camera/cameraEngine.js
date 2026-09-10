@@ -12,33 +12,45 @@ export class CameraEngine {
   }
 
   async start(preferredFacingMode = this.facingMode) {
+    // 1. Fully stop and release previous sensor
     this.stop();
     this.facingMode = preferredFacingMode;
 
-    const constraints = {
+    // 2. Hardware cooldown buffer: gives Android HAL time to release the lens
+    await new Promise((resolve) => setTimeout(resolve, 180));
+
+    // 3. Flexible resolution constraints: front selfie lenses need more relaxed bounds
+    const isFront = this.facingMode === 'user';
+    const primaryConstraints = {
       audio: false,
       video: {
         facingMode: { ideal: this.facingMode },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        width: { ideal: isFront ? 1280 : 1920 },
+        height: { ideal: isFront ? 720 : 1080 }
       }
     };
 
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-      this.video.srcObject = this.stream;
-      this.activeTrack = this.stream.getVideoTracks()[0];
-
-      return new Promise((resolve) => {
-        this.video.onloadedmetadata = () => {
-          this.video.play();
-          resolve(this.activeTrack.getSettings());
-        };
+      this.stream = await navigator.mediaDevices.getUserMedia(primaryConstraints);
+    } catch (primaryErr) {
+      console.warn(`High-res stream rejected for ${this.facingMode}, attempting minimal fallback:`, primaryErr);
+      
+      // Fallback: minimal constraints without fixed resolution boundaries
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: this.facingMode } }
       });
-    } catch (error) {
-      console.error(`Failed to start camera (${this.facingMode}):`, error);
-      throw error;
     }
+
+    this.video.srcObject = this.stream;
+    this.activeTrack = this.stream.getVideoTracks()[0];
+
+    return new Promise((resolve) => {
+      this.video.onloadedmetadata = () => {
+        this.video.play();
+        resolve(this.activeTrack.getSettings());
+      };
+    });
   }
 
   async flipCamera() {
@@ -73,9 +85,6 @@ export class CameraEngine {
     return { startX, startY, cropWidth, cropHeight };
   }
 
-  /**
-   * Captures the cropped & filtered frame and returns an in-memory HTMLCanvasElement.
-   */
   captureFrameCanvas() {
     if (!this.stream || !this.video.videoWidth) {
       throw new Error('Camera is not active or has no video dimensions.');
