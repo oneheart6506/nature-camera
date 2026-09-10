@@ -179,18 +179,20 @@
           <img id="detail-image" alt="Full view nature observation" />
         </div>
 
-        <footer class="detail-footer">
+                <footer class="detail-footer">
           <div class="detail-info">
-            <span id="detail-category-label" class="detail-title">Observation</span>
+            <div class="detail-meta-row">
+              <span id="detail-category-label" class="detail-title">Observation</span>
+              <button id="btn-detail-author" class="detail-author-btn hidden">
+                <span>👤</span>
+                <span id="detail-author-name">@observer</span>
+              </button>
+            </div>
             <span id="detail-specs" class="detail-sub"></span>
-            <button id="btn-detail-author" class="detail-author-btn hidden">
-              <span>👤</span>
-              <span id="detail-author-name">@observer</span>
-            </button>
             <p id="detail-caption" class="detail-caption hidden"></p>
           </div>
 
-                    <div class="detail-actions-row">
+          <div class="detail-actions-row">
             <button id="btn-cloud-sync" class="btn-cloud-sync">
               <span id="sync-icon">☁️</span>
               <span id="sync-status">Backup to Cloud</span>
@@ -201,7 +203,6 @@
               <span id="publish-text">Share to Field</span>
             </button>
 
-            <!-- Quiet Resonance Button -->
             <button id="btn-resonate" class="btn-resonance hidden">
               <span id="resonance-icon">💧</span>
               <span id="resonance-label">Resonate</span>
@@ -209,8 +210,8 @@
 
             <button id="btn-delete-entry" class="btn-delete">Delete</button>
           </div>
-
         </footer>
+
       </section>
 
       <section id="folio-modal" class="folio-modal hidden">

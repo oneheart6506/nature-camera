@@ -1,56 +1,94 @@
-body {
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea {
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
   font-family: var(--font-sans);
-  background-color: var(--color-bg-base);
-  color: var(--color-forest-800);
-  overscroll-behavior-y: none;
-  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
-  min-height: 100dvh;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: var(--safe-top) var(--space-4) var(--safe-bottom) var(--space-4);
+  overflow: hidden;
+  background-color: var(--bg-deep);
 }
 
-.foundation-card {
-  margin: auto;
-  max-width: 480px;
-  width: 100%;
-  padding: var(--space-6);
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-bg-subtle);
-  text-align: center;
-}
-
-.foundation-card h1 {
-  font-family: var(--font-serif);
-  font-size: var(--text-2xl);
-  font-weight: 400;
-  color: var(--color-forest-900);
-  margin-top: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.foundation-card p {
-  color: var(--color-forest-600);
-  font-size: var(--text-sm);
-}
-
-.badge {
-  display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-xs);
-  font-family: var(--font-mono);
-  background-color: var(--color-forest-100);
-  color: var(--color-forest-800);
-  border-radius: var(--radius-full);
-}
-
-
-/* Utility: Ensure hidden elements never display or block touch events */
+/* Reusable UI Components */
 .hidden {
   display: none !important;
+}
+
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.btn-pill:active {
+  transform: scale(0.94);
+  background: var(--bg-surface);
+  border-color: var(--border-focus);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.btn-icon:active {
+  transform: scale(0.92);
+  background: var(--bg-surface);
+}
+
+/* Minimal Scrollbars */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
