@@ -48,6 +48,9 @@ export class CloudJournal {
     }
   }
 
+    /**
+   * Publishes or unpublishes an observation to the global community feed.
+   */
   static async setPublicStatus(userId, userEmail, record, isPublic) {
     if (!userId) throw new Error('Sign in required to publish.');
     if (!record.cloudUrl) throw new Error('Photo must be cloud-backed before publishing.');
@@ -66,7 +69,8 @@ export class CloudJournal {
         aspectRatio: record.aspectRatio || '4:3',
         frame: record.frame || 'none',
         cloudUrl: record.cloudUrl,
-        capturedAt: record.timestamp,
+        // Fallbacks prevent Firestore setDoc undefined crashes
+        capturedAt: record.capturedAt || record.timestamp || Date.now(),
         publishedAt: serverTimestamp()
       };
       await setDoc(publicRef, publicPayload);
@@ -76,6 +80,7 @@ export class CloudJournal {
       await setDoc(userDocRef, { isPublic: false }, { merge: true });
     }
   }
+
 
   static async getPublicFeed(maxRecords = 30) {
     try {

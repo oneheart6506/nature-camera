@@ -396,9 +396,11 @@ function closeJournalUI() {
 
 function openDetailModal(record, displayUrl) {
   activeInspectionRecord = record;
+
   if (detailImage) detailImage.src = record.cloudUrl || displayUrl;
 
   const timestampVal = record.capturedAt || record.timestamp || Date.now();
+
   if (detailDate) {
     detailDate.textContent = new Date(timestampVal).toLocaleString('en-US', {
       dateStyle: 'medium',
@@ -407,18 +409,30 @@ function openDetailModal(record, displayUrl) {
   }
 
   const category = NATURE_CATEGORIES.find((c) => c.id === record.category);
+
   if (detailCategoryLabel) {
-    detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${category ? category.label : 'Observation'}`;
+    detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${
+      category ? category.label : 'Observation'
+    }`;
   }
+
   if (detailSpecs) {
-    detailSpecs.textContent = `${record.aspectRatio || '4:3'} • ${record.filter || 'natural'} • ${record.frame || 'raw'}`;
+    detailSpecs.textContent = `${record.aspectRatio || '4:3'} • ${
+      record.filter || 'natural'
+    } • ${record.frame || 'raw'}`;
   }
 
   // Interactive author pill
-  if (record.authorName && record.authorId && btnDetailAuthor && detailAuthorName) {
+  if (
+    record.authorName &&
+    record.authorId &&
+    btnDetailAuthor &&
+    detailAuthorName
+  ) {
     detailAuthorName.textContent = `@${record.authorName}`;
     btnDetailAuthor.classList.remove('hidden');
-    btnDetailAuthor.onclick = () => openObserverFolio(record.authorId, record.authorName);
+    btnDetailAuthor.onclick = () =>
+      openObserverFolio(record.authorId, record.authorName);
   } else {
     btnDetailAuthor?.classList.add('hidden');
   }
@@ -432,9 +446,20 @@ function openDetailModal(record, displayUrl) {
     }
   }
 
-  const isOwner = currentUser && (!record.authorId || record.authorId === currentUser.uid);
-  const isAlreadySynced = Boolean(record.syncedToFirestore || record.cloudUrl);
-  const isAlreadyPublic = Boolean(record.isPublic || record.publishedAt);
+  const isOwner =
+    currentUser &&
+    (!record.authorId || record.authorId === currentUser.uid);
+
+  const isAlreadySynced = Boolean(
+    record.syncedToFirestore || record.cloudUrl
+  );
+
+  // Set isPublic explicitly on activeInspectionRecord
+  const isAlreadyPublic = Boolean(
+    record.isPublic || record.publishedAt
+  );
+
+  activeInspectionRecord.isPublic = isAlreadyPublic;
 
   if (isOwner) {
     btnDeleteEntry?.classList.remove('hidden');
@@ -442,25 +467,33 @@ function openDetailModal(record, displayUrl) {
 
     if (isAlreadySynced && record.cloudUrl) {
       btnCloudSync?.classList.add('synced');
+
       if (syncIcon) syncIcon.textContent = '✓';
       if (syncStatus) syncStatus.textContent = 'Synced to Cloud';
+
       if (btnCloudSync) btnCloudSync.disabled = true;
 
       btnPublishFeed?.classList.remove('hidden');
+
       if (isAlreadyPublic) {
         btnPublishFeed?.classList.add('published');
+
         if (publishIcon) publishIcon.textContent = '🔒';
         if (publishText) publishText.textContent = 'Make Private';
       } else {
         btnPublishFeed?.classList.remove('published');
+
         if (publishIcon) publishIcon.textContent = '🌍';
         if (publishText) publishText.textContent = 'Share to Field';
       }
     } else {
       btnCloudSync?.classList.remove('synced');
+
       if (syncIcon) syncIcon.textContent = '☁️';
       if (syncStatus) syncStatus.textContent = 'Backup to Cloud';
+
       if (btnCloudSync) btnCloudSync.disabled = false;
+
       btnPublishFeed?.classList.add('hidden');
     }
   } else {
@@ -540,9 +573,18 @@ btnPublishFeed?.addEventListener('click', async () => {
   if (!activeInspectionRecord || !currentUser) return;
 
   btnPublishFeed.disabled = true;
-  const targetPublicState = !activeInspectionRecord.isPublic;
+
+  // Determine current state accurately
+  const isCurrentlyPublic = Boolean(
+    activeInspectionRecord.isPublic ||
+    activeInspectionRecord.publishedAt
+  );
+
+  const targetPublicState = !isCurrentlyPublic;
 
   try {
+    // 1. Sync to Cloud Firestore
+    // Creates or deletes from public_observations
     await CloudJournal.setPublicStatus(
       currentUser.uid,
       currentUser.email,
@@ -550,19 +592,63 @@ btnPublishFeed?.addEventListener('click', async () => {
       targetPublicState
     );
 
-    await JournalStore.updateObservationPublicStatus(activeInspectionRecord.id, targetPublicState);
+    // 2. Persist to local IndexedDB
+    await JournalStore.updateObservationPublicStatus(
+      activeInspectionRecord.id,
+      targetPublicState
+    );
 
+    // 3. Update active memory references
     activeInspectionRecord.isPublic = targetPublicState;
-    const localMatch = allObservations.find((o) => o.id === activeInspectionRecord.id);
+
+    if (!targetPublicState) {
+      delete activeInspectionRecord.publishedAt;
+
+      // Remove from The Wild list in memory immediately
+      communityFeedItems = communityFeedItems.filter(
+        (item) => item.id !== activeInspectionRecord.id
+      );
+    }
+
+    const localMatch = allObservations.find(
+      (o) => o.id === activeInspectionRecord.id
+    );
+
     if (localMatch) {
       localMatch.isPublic = targetPublicState;
     }
 
-    btnPublishFeed.classList.toggle('published', targetPublicState);
-    if (publishIcon) publishIcon.textContent = targetPublicState ? '🔒' : '🌍';
-    if (publishText) publishText.textContent = targetPublicState ? 'Make Private' : 'Share to Field';
+    // 4. Update button UI
+    btnPublishFeed.classList.toggle(
+      'published',
+      targetPublicState
+    );
 
-    showToast(targetPublicState ? 'Published to The Wild!' : 'Retracted from public field');
+    if (publishIcon) {
+      publishIcon.textContent = targetPublicState
+        ? '🔒'
+        : '🌍';
+    }
+
+    if (publishText) {
+      publishText.textContent = targetPublicState
+        ? 'Make Private'
+        : 'Share to Field';
+    }
+
+    showToast(
+      targetPublicState
+        ? 'Published to The Wild!'
+        : 'Retracted from public field'
+    );
+
+    // Refresh grid if currently viewing community feed
+    if (
+      currentStreamMode === 'community' &&
+      !targetPublicState
+    ) {
+      renderStreamGrid();
+    }
   } catch (err) {
     console.error('Publish error:', err);
     showToast(`Publish error: ${err.message}`);
