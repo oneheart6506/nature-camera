@@ -2,6 +2,7 @@ import { CameraEngine } from './modules/camera/cameraEngine.js';
 import { FrameRenderer } from './modules/canvas/frameRenderer.js';
 import { JournalStore } from './modules/storage/journalStore.js';
 import { CloudinaryUploader } from './modules/storage/cloudinaryUploader.js';
+import { CloudJournal } from './modules/storage/cloudJournal.js';
 import { AuthManager } from './modules/auth/authManager.js';
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from './constants/aspectRatios.js';
 import { NATURE_FILTERS, DEFAULT_FILTER_ID } from './constants/filters.js';
@@ -500,8 +501,17 @@ btnDeleteEntry.addEventListener('click', async () => {
   if (!activeInspectionRecord) return;
 
   try {
+    const user = AuthManager.getCurrentUser();
+
+    // 1. Delete from Cloud Firestore if user is authenticated
+    if (user && activeInspectionRecord.cloudUrl) {
+      await CloudJournal.deleteFromCloud(user.uid, activeInspectionRecord.id);
+    }
+
+    // 2. Delete from local device IndexedDB
     await JournalStore.deleteObservation(activeInspectionRecord.id);
-    history.back(); // Closes inspector via popstate
+
+    history.back();
     showToast('Observation deleted');
     allObservations = await JournalStore.getAllObservations();
     renderJournalGrid();
@@ -511,37 +521,59 @@ btnDeleteEntry.addEventListener('click', async () => {
   }
 });
 
+
 // Upload local photo blob directly to Cloudinary
+// Dual Cloud Sync: Upload pixels to Cloudinary -> Write metadata to Firestore
 btnCloudSync.addEventListener('click', async () => {
-  if (!activeInspectionRecord || !activeInspectionRecord.photoBlob) return;
+  if (!activeInspectionRecord) return;
+
+  // 1. Guard: User must be signed in to sync metadata to cloud
+  const user = AuthManager.getCurrentUser();
+  if (!user) {
+    showToast('Sign in to backup observations');
+    openAuthModal();
+    return;
+  }
 
   btnCloudSync.disabled = true;
   syncIcon.textContent = '⏳';
   syncStatus.textContent = 'Uploading...';
 
   try {
-    const uploadResult = await CloudinaryUploader.uploadPhoto(activeInspectionRecord.photoBlob, [
-      'nature-journal',
-      activeInspectionRecord.category || 'general'
-    ]);
+    let cloudUrl = activeInspectionRecord.cloudUrl;
+    let publicId = activeInspectionRecord.publicId;
 
-    // Update local IndexedDB with the new cloud CDN data
-    await JournalStore.updateObservationCloudData(activeInspectionRecord.id, uploadResult);
-    activeInspectionRecord.cloudUrl = uploadResult.cloudUrl;
-    activeInspectionRecord.publicId = uploadResult.publicId;
+    // Step A: Upload image to Cloudinary if not already uploaded
+    if (!cloudUrl && activeInspectionRecord.photoBlob) {
+      const uploadResult = await CloudinaryUploader.uploadPhoto(activeInspectionRecord.photoBlob, [
+        'nature-journal',
+        activeInspectionRecord.category || 'general'
+      ]);
+      cloudUrl = uploadResult.cloudUrl;
+      publicId = uploadResult.publicId;
+
+      await JournalStore.updateObservationCloudData(activeInspectionRecord.id, uploadResult);
+      activeInspectionRecord.cloudUrl = cloudUrl;
+      activeInspectionRecord.publicId = publicId;
+    }
+
+    // Step B: Write observation metadata to Cloud Firestore
+    syncStatus.textContent = 'Syncing...';
+    await CloudJournal.syncObservation(user.uid, activeInspectionRecord);
 
     btnCloudSync.classList.add('synced');
     syncIcon.textContent = '✓';
-    syncStatus.textContent = 'Backed up on Cloud';
-    showToast('Photo backed up to Cloud CDN!');
+    syncStatus.textContent = 'Synced to Cloud';
+    showToast('Observation safely synced to Cloud!');
   } catch (err) {
-    console.error('Cloud backup error:', err);
+    console.error('Cloud synchronization error:', err);
     btnCloudSync.disabled = false;
     syncIcon.textContent = '⚠️';
-    syncStatus.textContent = 'Upload Failed';
-    showToast(err.message || 'Upload failed');
+    syncStatus.textContent = 'Sync Failed';
+    showToast(err.message || 'Sync failed');
   }
 });
+
 
 
 btnRetry.addEventListener('click', initCamera);
