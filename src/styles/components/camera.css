@@ -52,34 +52,64 @@
   font-size: 0.74rem;
 }
 
-/* The Viewfinder Box */
+/* Viewfinder Flex Container */
 .viewfinder {
   position: relative;
   flex: 1;
+  min-height: 0; /* Critical: allows flex child to shrink properly */
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin: 8px 0;
+  margin: 6px 0;
   overflow: hidden;
 }
 
+/* Master Viewfinder Frame - Height-driven for exact aspect ratios */
 .viewfinder-frame {
   position: relative;
-  width: 100%;
+  height: 100%;
+  width: auto;
   max-height: 100%;
+  max-width: 100%;
+  margin: auto;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  transition: aspect-ratio 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.25s ease;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
 }
 
-/* Aspect Ratio Dimensions */
-.viewfinder-frame.aspect-4-3 { aspect-ratio: 3 / 4; max-width: 86vw; }
-.viewfinder-frame.aspect-1-1 { aspect-ratio: 1 / 1; max-width: 86vw; }
-.viewfinder-frame.aspect-16-9 { aspect-ratio: 9 / 16; max-height: 72vh; }
+/* Strict Portrait Aspect Ratio Locks */
+.viewfinder-frame.aspect-16-9 {
+  aspect-ratio: 9 / 16;
+  max-width: calc((100dvh - 220px) * 9 / 16);
+}
+
+.viewfinder-frame.aspect-4-3 {
+  aspect-ratio: 3 / 4;
+  max-width: min(88vw, calc((100dvh - 220px) * 3 / 4));
+}
+
+.viewfinder-frame.aspect-1-1 {
+  aspect-ratio: 1 / 1;
+  max-width: min(88vw, calc(100dvh - 220px));
+}
+
+/* Live Video Inside Frame */
+#camera-video, #preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#camera-video.mirror-preview {
+  transform: scaleX(-1);
+}
 
 /* ==========================================================================
    LIVE VIEWFINDER PHYSICAL FRAMES (FIXES "FRAMES NOT WORKING IN LIVE VIEW")
