@@ -1,7 +1,7 @@
 /**
  * sw.js - Network-First for HTML/Code, Cache-Fallback for Offline
  */
-const CACHE_NAME = 'nature-cam-v2.3';
+const CACHE_NAME = 'nature-cam-v3.0';
 
 const APP_SHELL = [
   '/',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   '/src/main.js',
   '/src/styles/reset.css',
   '/src/styles/variables.css',
+  '/src/styles/themes.css',
   '/src/styles/base.css',
   '/src/styles/components/camera.css',
   '/src/styles/components/toast.css',
@@ -30,6 +31,7 @@ const APP_SHELL = [
   '/src/constants/cloudinary.js',
   '/src/constants/firebase.js'
 ];
+
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

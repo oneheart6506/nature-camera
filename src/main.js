@@ -89,6 +89,10 @@ const authProfileView = document.getElementById('auth-profile-view');
 const profileEmail = document.getElementById('profile-email');
 const btnLogout = document.getElementById('btn-logout');
 
+const btnThemeToggle = document.getElementById('btn-theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+
+
 // App State
 const camera = new CameraEngine(videoElement);
 let currentRatioKey = DEFAULT_ASPECT_RATIO;
@@ -2174,3 +2178,37 @@ window.addEventListener(
     );
   }
 );
+
+
+// ---------------- ATMOSPHERIC NATURE THEMES ----------------
+
+const THEMES = [
+  { id: 'dark', icon: '🌲', label: 'Obsidian Forest' },
+  { id: 'light', icon: '📜', label: 'Botanical Paper' },
+  { id: 'sunset', icon: '🌅', label: 'Golden Sunset' },
+  { id: 'cloudy', icon: '☁️', label: 'Alpine Mist' },
+  { id: 'dusk', icon: '🌌', label: 'Twilight Canopy' }
+];
+
+let currentThemeIndex = 0;
+
+function applyTheme(themeId, notify = true) {
+  const theme = THEMES.find((t) => t.id === themeId) || THEMES[0];
+  document.documentElement.setAttribute('data-theme', theme.id);
+  currentThemeIndex = THEMES.indexOf(theme);
+  localStorage.setItem('nature_theme', theme.id);
+
+  if (themeIcon) themeIcon.textContent = theme.icon;
+  if (notify) showToast(`${theme.icon} ${theme.label}`);
+}
+
+function cycleTheme() {
+  const nextIndex = (currentThemeIndex + 1) % THEMES.length;
+  applyTheme(THEMES[nextIndex].id, true);
+}
+
+btnThemeToggle?.addEventListener('click', cycleTheme);
+
+// Load persisted theme on boot
+const savedTheme = localStorage.getItem('nature_theme') || 'dark';
+applyTheme(savedTheme, false);

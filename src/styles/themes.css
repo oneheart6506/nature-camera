@@ -1,0 +1,148 @@
+/* ==========================================================================
+   CHEF'S KISS ATMOSPHERIC NATURE THEMES
+   ========================================================================== */
+
+/* 1. OBSIDIAN FOREST (Default Dark) */
+:root, [data-theme="dark"] {
+  --bg-deep: #070a08;
+  --bg-base: #0c120e;
+  --bg-surface: #131c16;
+  --bg-elevated: #1b261f;
+  --bg-glass: rgba(15, 23, 18, 0.78);
+  --bg-glass-heavy: rgba(9, 13, 11, 0.92);
+
+  --text-primary: #f6f3ed;
+  --text-secondary: #a7b5ab;
+  --text-muted: #647568;
+  --text-inverse: #0c120e;
+
+  --accent-sunlight: #dfa84f;
+  --accent-sunlight-glow: rgba(223, 168, 79, 0.22);
+  --accent-forest: #4f855b;
+  --accent-forest-soft: rgba(79, 133, 91, 0.2);
+  --accent-dewdrop: #5bb2e0;
+  --accent-danger: #ea5e5e;
+  --accent-danger-soft: rgba(234, 94, 94, 0.16);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.16);
+  --border-focus: rgba(223, 168, 79, 0.6);
+  --frame-matte: #fbf9f4;
+  --frame-text: #1a201b;
+}
+
+/* 2. BOTANICAL PAPER (Light Editorial) */
+[data-theme="light"] {
+  --bg-deep: #ede8df;
+  --bg-base: #f5f2eb;
+  --bg-surface: #ffffff;
+  --bg-elevated: #eae4d7;
+  --bg-glass: rgba(255, 255, 255, 0.82);
+  --bg-glass-heavy: rgba(245, 242, 235, 0.94);
+
+  --text-primary: #18241b;
+  --text-secondary: #4a5c4e;
+  --text-muted: #859688;
+  --text-inverse: #f5f2eb;
+
+  --accent-sunlight: #b87b28;
+  --accent-sunlight-glow: rgba(184, 123, 40, 0.18);
+  --accent-forest: #2d5a37;
+  --accent-forest-soft: rgba(45, 90, 55, 0.14);
+  --accent-dewdrop: #2a82b0;
+  --accent-danger: #c93b3b;
+  --accent-danger-soft: rgba(201, 59, 59, 0.12);
+
+  --border-subtle: rgba(24, 36, 27, 0.08);
+  --border-light: rgba(24, 36, 27, 0.16);
+  --border-focus: rgba(184, 123, 40, 0.5);
+  --frame-matte: #ffffff;
+  --frame-text: #18241b;
+}
+
+/* 3. GOLDEN SUNSET (Warm Terracotta & Amber) */
+[data-theme="sunset"] {
+  --bg-deep: #140b08;
+  --bg-base: #1c100c;
+  --bg-surface: #261611;
+  --bg-elevated: #331f18;
+  --bg-glass: rgba(32, 18, 14, 0.8);
+  --bg-glass-heavy: rgba(20, 11, 8, 0.94);
+
+  --text-primary: #fdf3ed;
+  --text-secondary: #d3ab9b;
+  --text-muted: #8e6d61;
+  --text-inverse: #1c100c;
+
+  --accent-sunlight: #f38f4d;
+  --accent-sunlight-glow: rgba(243, 143, 77, 0.25);
+  --accent-forest: #d96f43;
+  --accent-forest-soft: rgba(217, 111, 67, 0.2);
+  --accent-dewdrop: #f1a961;
+  --accent-danger: #f05454;
+  --accent-danger-soft: rgba(240, 84, 84, 0.18);
+
+  --border-subtle: rgba(255, 215, 195, 0.09);
+  --border-light: rgba(255, 215, 195, 0.18);
+  --border-focus: rgba(243, 143, 77, 0.6);
+  --frame-matte: #fef7f2;
+  --frame-text: #261611;
+}
+
+/* 4. ALPINE MIST (Cloudy Slate & Frosted Glass) */
+[data-theme="cloudy"] {
+  --bg-deep: #0b0f14;
+  --bg-base: #10161d;
+  --bg-surface: #17202a;
+  --bg-elevated: #1f2b37;
+  --bg-glass: rgba(20, 29, 39, 0.8);
+  --bg-glass-heavy: rgba(11, 15, 20, 0.94);
+
+  --text-primary: #ecf2f8;
+  --text-secondary: #9cb1c4;
+  --text-muted: #5e7488;
+  --text-inverse: #10161d;
+
+  --accent-sunlight: #88c0d0;
+  --accent-sunlight-glow: rgba(136, 192, 208, 0.22);
+  --accent-forest: #5e81ac;
+  --accent-forest-soft: rgba(94, 129, 172, 0.22);
+  --accent-dewdrop: #81a1c1;
+  --accent-danger: #bf616a;
+  --accent-danger-soft: rgba(191, 97, 106, 0.18);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.16);
+  --border-focus: rgba(136, 192, 208, 0.5);
+  --frame-matte: #f4f7fa;
+  --frame-text: #17202a;
+}
+
+/* 5. TWILIGHT CANOPY (Dusk Violet & Midnight Indigo) */
+[data-theme="dusk"] {
+  --bg-deep: #0c0914;
+  --bg-base: #120e1d;
+  --bg-surface: #1a1429;
+  --bg-elevated: #241d38;
+  --bg-glass: rgba(23, 17, 37, 0.8);
+  --bg-glass-heavy: rgba(12, 9, 20, 0.94);
+
+  --text-primary: #f5f0fd;
+  --text-secondary: #b5a4ce;
+  --text-muted: #74638d;
+  --text-inverse: #120e1d;
+
+  --accent-sunlight: #c084fc;
+  --accent-sunlight-glow: rgba(192, 132, 252, 0.22);
+  --accent-forest: #9333ea;
+  --accent-forest-soft: rgba(147, 51, 234, 0.2);
+  --accent-dewdrop: #a855f7;
+  --accent-danger: #f43f5e;
+  --accent-danger-soft: rgba(244, 63, 94, 0.18);
+
+  --border-subtle: rgba(245, 240, 253, 0.09);
+  --border-light: rgba(245, 240, 253, 0.18);
+  --border-focus: rgba(192, 132, 252, 0.6);
+  --frame-matte: #faf7fd;
+  --frame-text: #1a1429;
+}

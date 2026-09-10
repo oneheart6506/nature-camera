@@ -47,6 +47,8 @@
     <link rel="stylesheet" href="/src/styles/components/toast.css" />
     <link rel="stylesheet" href="/src/styles/components/gallery.css" />
     <link rel="stylesheet" href="/src/styles/components/auth.css" />
+    <link rel="stylesheet" href="/src/styles/themes.css" />
+
   </head>
   <body>
     <div id="app">
@@ -56,9 +58,15 @@
       </div>
 
       <main id="camera-view" class="camera-container">
-        <header id="camera-hud" class="camera-hud">
-          <span class="camera-tag">Observer</span>
+                <header id="camera-hud" class="camera-hud">
+          <div class="camera-brand-group">
+            <span class="camera-tag">Observer</span>
+          </div>
           <div class="hud-actions">
+            <!-- Atmospheric Theme Switcher -->
+            <button id="btn-theme-toggle" class="btn-icon" aria-label="Cycle Theme">
+              <span id="theme-icon">🌓</span>
+            </button>
             <button id="btn-frame" class="btn-pill" aria-label="Camera Frame">Raw</button>
             <button id="btn-aspect" class="btn-pill" aria-label="Aspect Ratio">4:3</button>
             <button id="btn-grid-toggle" class="btn-icon" aria-label="Toggle Grid">
@@ -69,6 +77,7 @@
             </button>
           </div>
         </header>
+
 
         <div class="viewfinder">
           <div id="viewfinder-frame" class="viewfinder-frame aspect-4-3 frame-none">
@@ -192,24 +201,29 @@
             <p id="detail-caption" class="detail-caption hidden"></p>
           </div>
 
-          <div class="detail-actions-row">
-            <button id="btn-cloud-sync" class="btn-cloud-sync">
-              <span id="sync-icon">☁️</span>
-              <span id="sync-status">Backup to Cloud</span>
-            </button>
+                    <div class="detail-actions-matrix">
+            <div class="detail-row-primary">
+              <button id="btn-cloud-sync" class="btn-matrix-action btn-cloud-sync">
+                <span id="sync-icon">☁️</span>
+                <span id="sync-status">Backup to Cloud</span>
+              </button>
 
-            <button id="btn-publish-feed" class="btn-publish hidden">
-              <span id="publish-icon">🌍</span>
-              <span id="publish-text">Share to Field</span>
-            </button>
+              <button id="btn-publish-feed" class="btn-matrix-action btn-publish hidden">
+                <span id="publish-icon">🌍</span>
+                <span id="publish-text">Share to Field</span>
+              </button>
+            </div>
 
-            <button id="btn-resonate" class="btn-resonance hidden">
-              <span id="resonance-icon">💧</span>
-              <span id="resonance-label">Resonate</span>
-            </button>
+            <div class="detail-row-secondary">
+              <button id="btn-resonate" class="btn-matrix-action btn-resonance hidden">
+                <span id="resonance-icon">💧</span>
+                <span id="resonance-label">Resonate</span>
+              </button>
 
-            <button id="btn-delete-entry" class="btn-delete">Delete</button>
+              <button id="btn-delete-entry" class="btn-matrix-action btn-delete">Delete</button>
+            </div>
           </div>
+
         </footer>
 
       </section>

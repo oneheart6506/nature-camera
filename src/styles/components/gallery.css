@@ -12,7 +12,7 @@
   overflow: hidden;
 }
 
-/* Refined Editorial Header */
+/* Editorial Header */
 .journal-header {
   display: flex;
   align-items: center;
@@ -33,9 +33,9 @@
 
 .btn-stream-tab {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   font-weight: 500;
-  padding: 6px 14px;
+  padding: 6px 15px;
   border-radius: var(--radius-full);
   color: var(--text-muted);
   background: transparent;
@@ -48,7 +48,7 @@
   background: var(--text-primary);
   color: var(--text-inverse);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
 /* Category Filter Bar */
@@ -104,15 +104,13 @@
   cursor: pointer;
 }
 
-.obs-card:active {
-  transform: scale(0.97);
-}
+.obs-card:active { transform: scale(0.97); }
 
 .obs-thumbnail-wrap {
   width: 100%;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: #000;
+  background: var(--bg-deep);
 }
 
 .obs-thumbnail-wrap img {
@@ -137,9 +135,7 @@
   color: var(--text-muted);
 }
 
-.obs-meta-category {
-  font-size: 0.8rem;
-}
+.obs-meta-category { font-size: 0.8rem; }
 
 .obs-meta-author {
   font-family: var(--font-mono);
@@ -181,9 +177,9 @@
 .detail-modal {
   position: fixed;
   inset: 0;
-  background: rgba(8, 11, 9, 0.94);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -208,7 +204,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 0;
+  padding: 8px 0;
   overflow: hidden;
 }
 
@@ -220,22 +216,22 @@
   box-shadow: var(--shadow-lg);
 }
 
-/* Redesigned Inspector Footer: No More Cramped Boxes */
+/* The Balanced 2x2 Inspector Command Matrix */
 .detail-footer {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--bg-glass-heavy);
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
-  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-md);
 }
 
 .detail-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .detail-meta-row {
@@ -247,7 +243,7 @@
 
 .detail-title {
   font-family: var(--font-serif);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -261,11 +257,11 @@
 .detail-author-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: var(--accent-sunlight-glow);
-  border: 1px solid rgba(216, 168, 88, 0.3);
+  border: 1px solid var(--border-focus);
   color: var(--accent-sunlight);
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -277,81 +273,69 @@
   font-style: italic;
   font-size: 0.85rem;
   color: var(--text-secondary);
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
-/* Balanced Actions Layout */
-.detail-actions-row {
+/* 2x2 Clean Action Grid */
+.detail-actions-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.detail-row-primary,
+.detail-row-secondary {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
-.btn-cloud-sync {
+.btn-matrix-action {
   flex: 1;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  color: var(--accent-sunlight);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 10px 12px;
-  border-radius: var(--radius-full);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 500;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
+.btn-matrix-action:active { transform: scale(0.96); }
+
+/* Cloud Sync States */
+.btn-cloud-sync {
+  color: var(--accent-sunlight);
+}
 .btn-cloud-sync.synced {
   background: var(--accent-forest-soft);
   border-color: var(--accent-forest);
   color: #a3d4ac;
 }
 
+/* Publish States */
 .btn-publish {
-  flex: 1;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 10px 12px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
-
 .btn-publish.published {
   background: var(--accent-sunlight-glow);
   border-color: var(--accent-sunlight);
   color: var(--accent-sunlight);
 }
 
+/* Resonance States */
 .btn-resonance {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
   color: var(--accent-dewdrop);
-  padding: 10px 14px;
-  border-radius: var(--radius-full);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
-
 .btn-resonance.resonated {
   background: var(--accent-sunlight-glow);
   border-color: var(--accent-sunlight);
@@ -359,24 +343,11 @@
   box-shadow: 0 0 14px var(--accent-sunlight-glow);
 }
 
+/* Delete Button */
 .btn-delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: var(--accent-danger-soft);
-  border: 1px solid rgba(226, 97, 97, 0.25);
+  border-color: rgba(234, 94, 94, 0.28);
   color: var(--accent-danger);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 10px 14px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-delete:active {
-  transform: scale(0.95);
-  background: rgba(226, 97, 97, 0.3);
 }
 
 /* NATURALIST FOLIO MODAL */
@@ -401,7 +372,7 @@
 }
 
 .folio-identity-hero {
-  padding: 20px 16px;
+  padding: 18px 16px;
   background: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
   border-bottom: 1px solid var(--border-subtle);

@@ -1,4 +1,4 @@
-/* Camera Container Layout */
+/* Camera Layout Viewport */
 .camera-container {
   position: relative;
   width: 100%;
@@ -12,7 +12,7 @@
   padding-left: max(16px, var(--safe-left));
   padding-right: max(16px, var(--safe-right));
   overflow: hidden;
-  background: #000;
+  background: var(--bg-deep);
 }
 
 /* Floating Top HUD */
@@ -24,15 +24,20 @@
   z-index: 10;
 }
 
+.camera-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .camera-tag {
   font-family: var(--font-serif);
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.84rem;
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-primary);
-  opacity: 0.9;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  opacity: 0.95;
 }
 
 .hud-actions {
@@ -42,12 +47,12 @@
 }
 
 .hud-actions .btn-pill {
-  min-width: 48px;
+  min-width: 52px;
   padding: 6px 12px;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
 }
 
-/* Viewfinder Viewport */
+/* The Viewfinder Box */
 .viewfinder {
   position: relative;
   flex: 1;
@@ -55,7 +60,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin: 10px 0;
+  margin: 8px 0;
   overflow: hidden;
 }
 
@@ -63,16 +68,73 @@
   position: relative;
   width: 100%;
   max-height: 100%;
-  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 0 0 1px var(--border-subtle), var(--shadow-lg);
-  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
-/* Aspect Ratio Enforcements */
+/* Aspect Ratio Dimensions */
 .viewfinder-frame.aspect-4-3 { aspect-ratio: 3 / 4; max-width: 86vw; }
 .viewfinder-frame.aspect-1-1 { aspect-ratio: 1 / 1; max-width: 86vw; }
 .viewfinder-frame.aspect-16-9 { aspect-ratio: 9 / 16; max-height: 72vh; }
+
+/* ==========================================================================
+   LIVE VIEWFINDER PHYSICAL FRAMES (FIXES "FRAMES NOT WORKING IN LIVE VIEW")
+   ========================================================================== */
+
+/* 1. RAW (Clean, minimal radius, zero padding) */
+.viewfinder-frame.frame-none {
+  border-radius: var(--radius-md);
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+}
+.viewfinder-frame.frame-none #camera-video,
+.viewfinder-frame.frame-none #preview-image {
+  border-radius: var(--radius-md);
+}
+
+/* 2. INSTANT (Classic Polaroid Matte in Live View) */
+.viewfinder-frame.frame-instant {
+  background: var(--frame-matte);
+  padding: 12px 12px 46px 12px;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0,0,0,0.15);
+}
+.viewfinder-frame.frame-instant #camera-video,
+.viewfinder-frame.frame-instant #preview-image {
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+/* 3. BORDER (Minimalist Fine Art Gallery Matte) */
+.viewfinder-frame.frame-border {
+  background: var(--frame-matte);
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.viewfinder-frame.frame-border #camera-video,
+.viewfinder-frame.frame-border #preview-image {
+  border-radius: 3px;
+}
+
+/* 4. EDITORIAL (Precision Dark Studio Keyline) */
+.viewfinder-frame.frame-editorial {
+  background: var(--bg-surface);
+  padding: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+.viewfinder-frame.frame-editorial #camera-video,
+.viewfinder-frame.frame-editorial #preview-image {
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+}
 
 #camera-video, #preview-image {
   width: 100%;
@@ -85,7 +147,7 @@
   transform: scaleX(-1);
 }
 
-/* Clean Rule-of-Thirds Grid */
+/* Rule of Thirds Grid */
 .camera-grid {
   position: absolute;
   inset: 0;
@@ -97,22 +159,27 @@
 }
 
 .grid-cell {
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 .grid-cell:nth-child(3n) { border-right: none; }
 .grid-cell:nth-child(n + 7) { border-bottom: none; }
 
-/* Filter Carousel */
+/* Filter Carousel with Gradient Fade Scrims */
+.filter-carousel-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 .filter-carousel {
   display: flex;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding: 8px 4px;
+  padding: 6px 2px;
   width: 100%;
   scroll-behavior: smooth;
-  margin-bottom: 12px;
 }
 
 .filter-pill {
@@ -122,10 +189,11 @@
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   padding: 6px 14px;
   border-radius: var(--radius-full);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
@@ -136,10 +204,10 @@
   border-color: var(--text-primary);
   font-weight: 600;
   transform: scale(1.04);
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 14px var(--accent-sunlight-glow);
 }
 
-/* Shutter Row Controls */
+/* Shutter Row */
 .camera-controls {
   display: flex;
   flex-direction: column;
@@ -154,14 +222,14 @@
   justify-content: space-around;
   width: 100%;
   max-width: 340px;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
 
 .btn-shutter {
   width: 76px;
   height: 76px;
   border-radius: var(--radius-full);
-  border: 3px solid rgba(255, 255, 255, 0.85);
+  border: 3px solid var(--text-primary);
   background: transparent;
   display: flex;
   align-items: center;
@@ -170,9 +238,7 @@
   transition: transform 0.15s ease;
 }
 
-.btn-shutter:active {
-  transform: scale(0.92);
-}
+.btn-shutter:active { transform: scale(0.92); }
 
 .shutter-inner {
   width: 60px;
@@ -198,14 +264,16 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 16px;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-lg);
 }
 
 .review-categories {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .category-chip {
@@ -213,7 +281,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   padding: 6px 12px;
   border-radius: var(--radius-full);
   cursor: pointer;
@@ -227,9 +295,7 @@
   font-weight: 500;
 }
 
-.caption-input-wrap {
-  width: 100%;
-}
+.caption-input-wrap { width: 100%; }
 
 .caption-input {
   width: 100%;
@@ -244,14 +310,9 @@
   transition: border-color 0.2s ease;
 }
 
-.caption-input:focus {
-  border-color: var(--accent-sunlight);
-}
+.caption-input:focus { border-color: var(--accent-sunlight); }
 
-.review-actions {
-  display: flex;
-  gap: 10px;
-}
+.review-actions { display: flex; gap: 10px; }
 
 .btn-action {
   flex: 1;

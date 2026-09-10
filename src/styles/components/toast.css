@@ -1,30 +1,43 @@
-/* Subtle Save Confirmation Toast */
+/* Chef's Kiss Floating Toast Capsule */
 .toast-notice {
   position: fixed;
-  top: calc(var(--space-8) + var(--safe-top));
+  top: calc(var(--safe-top) + 16px);
   left: 50%;
-  transform: translateX(-50%) translateY(-20px);
-  background: rgba(18, 32, 24, 0.92);
-  color: var(--color-bg-base);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: var(--space-2) var(--space-4);
+  transform: translate(-50%, -24px) scale(0.94);
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), var(--shadow-glow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: var(--text-primary);
+  padding: 8px 18px;
   border-radius: var(--radius-full);
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  letter-spacing: 0.04em;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  opacity: 0;
+  gap: 10px;
+  z-index: 99999;
   pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 100;
-  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  max-width: 90vw;
 }
 
 .toast-notice.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translate(-50%, 0) scale(1);
+}
+
+#toast-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+#toast-msg {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
