@@ -706,46 +706,18 @@ function openDetailModal(
   activeInspectionRecord.isPublic =
     isAlreadyPublic;
 
-  // Resonance is available on public observations when signed in
-  if (
-    isAlreadyPublic &&
-    currentUser
-  ) {
-    btnResonate?.classList.remove(
-      'hidden'
-    );
+    // Resonance belongs exclusively to community viewing ("The Wild" or an Observer's Folio)
+  const isCommunityBrowsing = currentStreamMode === 'community' || (folioModal && !folioModal.classList.contains('hidden'));
+  const isOtherNaturalist = currentUser && record.authorId && record.authorId !== currentUser.uid;
 
-    const hasResonated =
-      Array.isArray(
-        record.resonances
-      ) &&
-      record.resonances.includes(
-        currentUser.uid
-      );
-
-    btnResonate?.classList.toggle(
-      'resonated',
-      hasResonated
-    );
-
-    if (resonanceIcon) {
-      resonanceIcon.textContent =
-        hasResonated
-          ? '✨'
-          : '💧';
-    }
-
-    if (resonanceLabel) {
-      resonanceLabel.textContent =
-        hasResonated
-          ? 'Resonated'
-          : 'Resonate';
-    }
-
+  if (isCommunityBrowsing && isOtherNaturalist) {
+    btnResonate?.classList.remove('hidden');
+    const hasResonated = Array.isArray(record.resonances) && record.resonances.includes(currentUser.uid);
+    btnResonate?.classList.toggle('resonated', hasResonated);
+    if (resonanceIcon) resonanceIcon.textContent = hasResonated ? '✨' : '💧';
+    if (resonanceLabel) resonanceLabel.textContent = hasResonated ? 'Resonated' : 'Resonate';
   } else {
-    btnResonate?.classList.add(
-      'hidden'
-    );
+    btnResonate?.classList.add('hidden');
   }
 
   if (isOwner) {
