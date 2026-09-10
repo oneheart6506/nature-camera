@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <rect width="512" height="512" rx="128" fill="#090e0b"/>
+  <!-- Outer Focus Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#3a5340" stroke-width="12" stroke-dasharray="24 16"/>
+  <!-- Inner Aperture Ring -->
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#dca048" stroke-width="8"/>
+  <!-- Minimal Botanical Leaf Silhouette -->
+  <path d="M256 160 C190 210 190 310 256 352 C322 310 322 210 256 160 Z" fill="#628269"/>
+  <path d="M256 190 L256 340" stroke="#090e0b" stroke-width="6" stroke-linecap="round"/>
+</svg>

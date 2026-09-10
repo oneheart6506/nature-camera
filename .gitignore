@@ -1,0 +1,15 @@
+# Node dependencies & caches
+node_modules/
+.npm/
+
+# Local server & system logs
+server.log
+npm-debug.log*
+
+# Operating System clutter
+.DS_Store
+Thumbs.db
+
+# Production build outputs (future phases)
+dist/
+build/

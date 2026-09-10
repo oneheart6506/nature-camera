@@ -1,0 +1,19 @@
+{
+  "name": "Nature Camera",
+  "short_name": "NatureCam",
+  "description": "A quiet observer of light, flora, and landscape.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090e0b",
+  "theme_color": "#090e0b",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
