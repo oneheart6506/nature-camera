@@ -41,7 +41,8 @@ export class JournalStore {
         caption: entry.caption || '',
         cloudUrl: entry.cloudUrl || null,
         publicId: entry.publicId || null,
-        syncedToFirestore: entry.syncedToFirestore || false
+        syncedToFirestore: entry.syncedToFirestore || false,
+        isPublic: entry.isPublic || false
       };
 
       const request = store.put(record);
@@ -80,8 +81,35 @@ export class JournalStore {
   }
 
   /**
+   * Persists the public published status into local IndexedDB
+   */
+  static async updateObservationPublicStatus(id, isPublic) {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const getReq = store.get(id);
+
+      getReq.onsuccess = () => {
+        const record = getReq.result;
+        if (!record) {
+          reject(new Error(`Record ${id} not found.`));
+          return;
+        }
+        record.isPublic = isPublic;
+
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(record);
+        updateReq.onerror = () => reject(updateReq.error);
+      };
+
+      getReq.onerror = () => reject(getReq.error);
+      tx.oncomplete = () => db.close();
+    });
+  }
+
+  /**
    * Merges cloud observations from Firestore into local IndexedDB.
-   * Preserves existing local photoBlob if present.
    */
   static async mergeCloudRecords(cloudRecords) {
     if (!cloudRecords || cloudRecords.length === 0) return 0;
@@ -107,7 +135,8 @@ export class JournalStore {
             timestamp: cRec.capturedAt || Date.now(),
             cloudUrl: cRec.cloudUrl,
             publicId: cRec.publicId,
-            syncedToFirestore: true
+            syncedToFirestore: true,
+            isPublic: cRec.isPublic || false
           };
 
           store.put(merged);

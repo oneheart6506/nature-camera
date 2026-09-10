@@ -502,6 +502,8 @@ function closeFolioModalUI() {
 
 // ---------------- COMMUNITY PUBLISHING ----------------
 
+// ---------------- COMMUNITY PUBLISHING ----------------
+
 btnPublishFeed.addEventListener('click', async () => {
   if (!activeInspectionRecord || !currentUser) return;
 
@@ -509,6 +511,7 @@ btnPublishFeed.addEventListener('click', async () => {
   const targetPublicState = !activeInspectionRecord.isPublic;
 
   try {
+    // 1. Sync to Cloud Firestore
     await CloudJournal.setPublicStatus(
       currentUser.uid,
       currentUser.email,
@@ -516,18 +519,30 @@ btnPublishFeed.addEventListener('click', async () => {
       targetPublicState
     );
 
+    // 2. Persist to local IndexedDB so refreshes preserve this state
+    await JournalStore.updateObservationPublicStatus(activeInspectionRecord.id, targetPublicState);
+
+    // 3. Update in-memory records
     activeInspectionRecord.isPublic = targetPublicState;
+    const localMatch = allObservations.find((o) => o.id === activeInspectionRecord.id);
+    if (localMatch) {
+      localMatch.isPublic = targetPublicState;
+    }
+
+    // 4. Update UI button styling
     btnPublishFeed.classList.toggle('published', targetPublicState);
     publishIcon.textContent = targetPublicState ? '🔒' : '🌍';
     publishText.textContent = targetPublicState ? 'Make Private' : 'Share to Field';
 
     showToast(targetPublicState ? 'Published to The Wild!' : 'Retracted from public field');
   } catch (err) {
+    console.error('Publish error:', err);
     showToast(`Publish error: ${err.message}`);
   } finally {
     btnPublishFeed.disabled = false;
   }
 });
+
 
 // ---------------- AUTH & SYNC ----------------
 
