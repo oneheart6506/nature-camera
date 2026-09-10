@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Icon Generator</title>
+  </head>
+  <body style="background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:40px;">
+    <h2>Generating PWA PNG Icons...</h2>
+    <p>Check your phone's downloads folder.</p>
+
+    <script>
+      function createPngIcon(size, filename) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#090e0b';
+        ctx.fillRect(0, 0, size, size);
+
+        // Outer Accent Ring
+        ctx.strokeStyle = '#3a5340';
+        ctx.lineWidth = size * 0.03;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size * 0.38, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner Sunlight Ring
+        ctx.strokeStyle = '#dca048';
+        ctx.lineWidth = size * 0.02;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size * 0.25, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Botanical Leaf Center
+        ctx.fillStyle = '#628269';
+        ctx.beginPath();
+        ctx.ellipse(size / 2, size / 2, size * 0.12, size * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        canvas.toBlob((blob) => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }, 'image/png');
+      }
+
+      window.onload = () => {
+        createPngIcon(192, 'icon-192.png');
+        setTimeout(() => createPngIcon(512, 'icon-512.png'), 500);
+      };
+    </script>
+  </body>
+</html>
