@@ -283,6 +283,15 @@
   color: var(--text-muted);
 }
 
+.detail-telemetry {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent-sunlight);
+  letter-spacing: 0.02em;
+  margin-top: 1px;
+}
+
+
 .detail-author-btn {
   display: inline-flex;
   align-items: center;

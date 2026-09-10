@@ -12,14 +12,19 @@ export class PostcardRenderer {
       img.src = typeof imageSource === 'string' ? imageSource : URL.createObjectURL(imageSource);
     });
 
-    // Base resolution anchored to high-res width
     const baseWidth = 1440;
     const imgAspect = img.width / img.height;
     const imgHeight = Math.round(baseWidth / imgAspect);
 
-    // Padding & Typography metrics
     const mattePadding = 48;
-    const footerHeight = metadata.caption ? 160 : 110;
+    const hasCaption = Boolean(metadata.caption && metadata.caption.trim().length > 0);
+    const hasTelemetry = Boolean(metadata.telemetryString);
+    
+    // Dynamic footer sizing based on metadata density
+    let footerHeight = 110;
+    if (hasCaption && hasTelemetry) footerHeight = 190;
+    else if (hasCaption || hasTelemetry) footerHeight = 150;
+
     const canvasWidth = baseWidth + mattePadding * 2;
     const canvasHeight = imgHeight + mattePadding + footerHeight;
 
@@ -37,31 +42,31 @@ export class PostcardRenderer {
     ctx.lineWidth = 2;
     ctx.strokeRect(16, 16, canvasWidth - 32, canvasHeight - 32);
 
-    // 3. Draw Captured Photograph
+    // 3. Draw Photograph
     ctx.drawImage(img, mattePadding, mattePadding, baseWidth, imgHeight);
 
-    // 4. Subtle Picture Keyline
+    // 4. Picture Keyline
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.lineWidth = 1;
     ctx.strokeRect(mattePadding, mattePadding, baseWidth, imgHeight);
 
-    // 5. Typography — Category & Observer Header
-    const textStartY = imgHeight + mattePadding + 44;
+    // 5. Category Header & Author
+    let currentY = imgHeight + mattePadding + 44;
     ctx.fillStyle = '#1a241b';
     ctx.font = '600 28px "Playfair Display", Georgia, serif';
     const categoryLabel = (metadata.category || 'Observation').toUpperCase();
-    ctx.fillText(`${categoryLabel}`, mattePadding, textStartY);
+    ctx.fillText(categoryLabel, mattePadding, currentY);
 
-    // Right-aligned Author Watermark
     if (metadata.authorName) {
       ctx.textAlign = 'right';
       ctx.fillStyle = '#6b7a6f';
       ctx.font = '500 22px -apple-system, sans-serif';
-      ctx.fillText(`@${metadata.authorName}`, canvasWidth - mattePadding, textStartY);
+      ctx.fillText(`@${metadata.authorName}`, canvasWidth - mattePadding, currentY);
       ctx.textAlign = 'left';
     }
 
-    // 6. Typography — Timestamp & Optical Specs
+    // 6. Timestamp & Optical Specs
+    currentY += 32;
     ctx.fillStyle = '#829185';
     ctx.font = '400 20px monospace';
     const dateStr = new Date(metadata.timestamp || Date.now()).toLocaleDateString('en-US', {
@@ -70,13 +75,22 @@ export class PostcardRenderer {
       year: 'numeric'
     });
     const specs = `${dateStr}  •  ${metadata.aspectRatio || '4:3'}  •  ${metadata.filter || 'natural'}`;
-    ctx.fillText(specs, mattePadding, textStartY + 32);
+    ctx.fillText(specs, mattePadding, currentY);
 
-    // 7. Typography — Optional Caption Note
-    if (metadata.caption && metadata.caption.trim().length > 0) {
+    // 7. Ambient Field Telemetry Stamp
+    if (hasTelemetry) {
+      currentY += 28;
+      ctx.fillStyle = '#9aa89d';
+      ctx.font = '400 18px monospace';
+      ctx.fillText(`📍 ${metadata.telemetryString}`, mattePadding, currentY);
+    }
+
+    // 8. Field Note Caption
+    if (hasCaption) {
+      currentY += 34;
       ctx.fillStyle = '#3a4a3e';
-      ctx.font = 'italic 400 24px "Playfair Display", Georgia, serif';
-      ctx.fillText(`“${metadata.caption.trim()}”`, mattePadding, textStartY + 74);
+      ctx.font = 'italic 400 22px "Playfair Display", Georgia, serif';
+      ctx.fillText(`“${metadata.caption.trim()}”`, mattePadding, currentY);
     }
 
     return new Promise((resolve) => {

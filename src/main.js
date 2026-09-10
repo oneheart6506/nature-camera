@@ -9,6 +9,8 @@ import { NATURE_FILTERS, DEFAULT_FILTER_ID } from './constants/filters.js';
 import { NATURE_FRAMES, DEFAULT_FRAME_ID } from './constants/frames.js';
 import { NATURE_CATEGORIES, DEFAULT_CATEGORY_ID } from './constants/categories.js';
 import { PostcardRenderer } from './modules/canvas/postcardRenderer.js';
+import { TelemetryEngine } from './modules/sensors/telemetryEngine.js';
+
 
 
 // DOM Elements - Camera Viewfinder & HUD
@@ -96,6 +98,10 @@ const themeIcon = document.getElementById('theme-icon');
 
 const btnExportPlate = document.getElementById('btn-export-plate');
 
+const cameraTelemetryTag = document.getElementById('camera-telemetry-tag');
+const detailTelemetry = document.getElementById('detail-telemetry');
+
+
 
 
 // App State
@@ -117,6 +123,9 @@ let createdGalleryUrls = [];
 let createdFolioUrls = [];
 let authMode = 'login';
 let currentUser = null;
+
+let currentTelemetry = null;
+
 
 // ---------------- TOAST NOTIFICATION ----------------
 
@@ -828,6 +837,16 @@ function openDetailModal(
   detailModal?.classList.remove(
     'hidden'
   );
+
+  const formattedCoord = record.telemetry ? TelemetryEngine.formatTelemetry(record.telemetry) : null;
+  if (formattedCoord && detailTelemetry) {
+    detailTelemetry.textContent = `📍 ${formattedCoord}`;
+    detailTelemetry.classList.remove('hidden');
+  } else {
+    detailTelemetry?.classList.add('hidden');
+  }
+
+  
 }
 
 function closeDetailModalUI() {
@@ -1617,12 +1636,17 @@ btnExportPlate?.addEventListener('click', async () => {
     const imageSrc = activeInspectionRecord.cloudUrl || activeInspectionRecord.photoBlob;
     if (!imageSrc) throw new Error('Image source missing');
 
+        const telemetryStr = activeInspectionRecord.telemetry
+      ? TelemetryEngine.formatTelemetry(activeInspectionRecord.telemetry)
+      : null;
+
     const plateBlob = await PostcardRenderer.createFieldPlate(imageSrc, {
       category: activeInspectionRecord.category,
       caption: activeInspectionRecord.caption,
       timestamp: activeInspectionRecord.capturedAt || activeInspectionRecord.timestamp,
       aspectRatio: activeInspectionRecord.aspectRatio,
       filter: activeInspectionRecord.filter,
+      telemetryString: telemetryStr,
       authorName: activeInspectionRecord.authorName || (currentUser ? currentUser.email.split('@')[0] : null)
     });
 
@@ -1937,6 +1961,18 @@ async function initCamera() {
   } catch (err) {
     showError(err);
   }
+
+// Ambient GPS telemetry lock
+TelemetryEngine.getCurrentTelemetry().then((telemetry) => {
+  currentTelemetry = telemetry;
+  if (cameraTelemetryTag) {
+    cameraTelemetryTag.textContent = telemetry
+      ? TelemetryEngine.formatTelemetry(telemetry)
+      : 'Field Mode Active';
+  }
+});
+
+  
 }
 
 function showError(err) {
@@ -2022,8 +2058,14 @@ btnCapture?.addEventListener(
         err
       );
     }
-  }
-);
+
+// Snapshot telemetry at shutter press
+TelemetryEngine.getCurrentTelemetry().then((t) => {
+  if (t) currentTelemetry = t;
+});
+
+    
+  });
 
 btnAspect?.addEventListener(
   'click',
@@ -2098,30 +2140,17 @@ btnSave?.addEventListener(
           ? inputCaption.value.trim()
           : '';
 
-      await JournalStore.saveObservation(
-        {
-          photoBlob:
-            currentPhotoBlob,
+            await JournalStore.saveObservation({
+        photoBlob: currentPhotoBlob,
+        category: selectedCaptureCategory,
+        caption: captionNote,
+        filter: activeFilterId,
+        aspectRatio: currentRatioKey,
+        frame: activeFrameId,
+        telemetry: currentTelemetry,
+        timestamp: Date.now()
+      });
 
-          category:
-            selectedCaptureCategory,
-
-          caption:
-            captionNote,
-
-          filter:
-            activeFilterId,
-
-          aspectRatio:
-            currentRatioKey,
-
-          frame:
-            activeFrameId,
-
-          timestamp:
-            Date.now()
-        }
-      );
 
       const categoryObj =
         NATURE_CATEGORIES.find(

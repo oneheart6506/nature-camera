@@ -59,9 +59,11 @@
 
       <main id="camera-view" class="camera-container">
                 <header id="camera-hud" class="camera-hud">
-          <div class="camera-brand-group">
+                    <div class="camera-brand-group">
             <span class="camera-tag">Observer</span>
+            <span id="camera-telemetry-tag" class="camera-telemetry-hud">Acquiring Field Lock...</span>
           </div>
+
           <div class="hud-actions">
             <!-- Atmospheric Theme Switcher -->
             <button id="btn-theme-toggle" class="btn-icon" aria-label="Cycle Theme">
@@ -205,7 +207,10 @@
                 <span id="detail-author-name">@observer</span>
               </button>
             </div>
-            <span id="detail-specs" class="detail-sub"></span>
+                        <span id="detail-specs" class="detail-sub"></span>
+            <span id="detail-telemetry" class="detail-telemetry hidden"></span>
+            <p id="detail-caption" class="detail-caption hidden"></p>
+
             <p id="detail-caption" class="detail-caption hidden"></p>
           </div>
 
