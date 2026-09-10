@@ -186,22 +186,21 @@
 
       <!-- JOURNAL GALLERY VIEW -->
       <section id="journal-view" class="journal-view hidden">
-        <header class="journal-header">
+                <header class="journal-header">
           <button id="btn-auth-status" class="btn-pill" aria-label="Account">
             <span id="auth-status-icon">👤</span>
             <span id="auth-status-text">Sign In</span>
           </button>
 
-          <h1>Field Journal</h1>
+          <!-- Stream Switcher: My Journal vs The Wild -->
+          <nav class="stream-switch" aria-label="Stream Selection">
+            <button id="tab-journal-personal" class="btn-stream-tab active">Journal</button>
+            <button id="tab-journal-community" class="btn-stream-tab">The Wild</button>
+          </nav>
 
-          <button
-            id="btn-close-journal"
-            class="btn-pill"
-            aria-label="Close Journal"
-          >
-            Done
-          </button>
+          <button id="btn-close-journal" class="btn-pill" aria-label="Close Journal">Done</button>
         </header>
+
 
         <nav
           id="journal-categories"
@@ -258,20 +257,21 @@
             ></p>
           </div>
 
-          <div class="detail-actions-row">
-            <!-- Cloud Upload / Status Action -->
+                    <div class="detail-actions-row">
             <button id="btn-cloud-sync" class="btn-cloud-sync">
               <span id="sync-icon">☁️</span>
               <span id="sync-status">Backup to Cloud</span>
             </button>
 
-            <button
-              id="btn-delete-entry"
-              class="btn-delete"
-            >
-              Delete
+            <!-- Community Feed Toggle -->
+            <button id="btn-publish-feed" class="btn-publish hidden">
+              <span id="publish-icon">🌍</span>
+              <span id="publish-text">Share to Field</span>
             </button>
+
+            <button id="btn-delete-entry" class="btn-delete">Delete</button>
           </div>
+
         </footer>
       </section>
 

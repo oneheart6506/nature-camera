@@ -1,5 +1,5 @@
 /**
- * cloudJournal.js - Cloud Firestore synchronization engine.
+ * cloudJournal.js - Cloud Firestore synchronization & community feed engine.
  */
 import {
   doc,
@@ -9,6 +9,7 @@ import {
   getDocs,
   query,
   orderBy,
+  limit,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../constants/firebase.js';
@@ -34,7 +35,8 @@ export class CloudJournal {
       cloudUrl: record.cloudUrl || null,
       publicId: record.publicId || null,
       capturedAt: record.timestamp,
-      syncedAt: serverTimestamp()
+      syncedAt: serverTimestamp(),
+      isPublic: record.isPublic || false
     };
 
     try {
@@ -47,7 +49,57 @@ export class CloudJournal {
   }
 
   /**
-   * Fetches all cloud observations for the authenticated user ordered newest first.
+   * Publishes or unpublishes an observation to the global community feed.
+   */
+  static async setPublicStatus(userId, userEmail, record, isPublic) {
+    if (!userId) throw new Error('Sign in required to publish.');
+    if (!record.cloudUrl) throw new Error('Photo must be cloud-backed before publishing.');
+
+    const publicRef = doc(db, 'public_observations', record.id);
+    const userDocRef = doc(db, 'users', userId, 'observations', record.id);
+
+    if (isPublic) {
+      const publicPayload = {
+        id: record.id,
+        authorId: userId,
+        authorName: userEmail.split('@')[0],
+        category: record.category || 'plants',
+        caption: record.caption || '',
+        filter: record.filter || 'natural',
+        aspectRatio: record.aspectRatio || '4:3',
+        frame: record.frame || 'none',
+        cloudUrl: record.cloudUrl,
+        capturedAt: record.timestamp,
+        publishedAt: serverTimestamp()
+      };
+      await setDoc(publicRef, publicPayload);
+      await setDoc(userDocRef, { isPublic: true }, { merge: true });
+    } else {
+      await deleteDoc(publicRef);
+      await setDoc(userDocRef, { isPublic: false }, { merge: true });
+    }
+  }
+
+  /**
+   * Fetches the latest community observations.
+   */
+  static async getPublicFeed(maxRecords = 30) {
+    try {
+      const publicCol = collection(db, 'public_observations');
+      const q = query(publicCol, orderBy('publishedAt', 'desc'), limit(maxRecords));
+      const snapshot = await getDocs(q);
+
+      const feed = [];
+      snapshot.forEach((d) => feed.push(d.data()));
+      return feed;
+    } catch (error) {
+      console.error('Failed to load community feed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches private cloud observations for the authenticated user.
    */
   static async fetchUserObservations(userId) {
     if (!userId) return [];
@@ -64,22 +116,24 @@ export class CloudJournal {
 
       return records;
     } catch (error) {
-      console.error('Failed to fetch user observations from Firestore:', error);
+      console.error('Failed to fetch user observations:', error);
       throw error;
     }
   }
 
   /**
-   * Deletes a cloud observation document.
+   * Deletes an observation document from private storage and public feed.
    */
   static async deleteFromCloud(userId, observationId) {
     if (!userId || !observationId) return;
 
-    const docRef = doc(db, 'users', userId, 'observations', observationId);
     try {
-      await deleteDoc(docRef);
+      // 1. Remove from private collection
+      await deleteDoc(doc(db, 'users', userId, 'observations', observationId));
+      // 2. Remove from public stream if present
+      await deleteDoc(doc(db, 'public_observations', observationId));
     } catch (error) {
-      console.error('Failed to delete cloud document:', error);
+      console.error('Failed to purge cloud document:', error);
       throw error;
     }
   }

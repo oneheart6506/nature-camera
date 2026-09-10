@@ -2,7 +2,7 @@
  * sw.js - Service Worker for Nature Camera
  * Provides offline App Shell caching and instantaneous boots.
  */
-const CACHE_NAME = 'nature-cam-v1.4'; // BUMP TO v1.3
+const CACHE_NAME = 'nature-cam-v1.5'; // BUMP TO v1.3
 
 const APP_SHELL = [
   '/',

@@ -37,6 +37,8 @@ const toastMsg = document.getElementById('toast-msg');
 const btnOpenJournal = document.getElementById('btn-open-journal');
 const journalView = document.getElementById('journal-view');
 const btnCloseJournal = document.getElementById('btn-close-journal');
+const tabPersonal = document.getElementById('tab-journal-personal');
+const tabCommunity = document.getElementById('tab-journal-community');
 const journalCategories = document.getElementById('journal-categories');
 const observationsGrid = document.getElementById('observations-grid');
 const emptyJournalMsg = document.getElementById('empty-journal-msg');
@@ -50,6 +52,9 @@ const detailCaption = document.getElementById('detail-caption');
 const btnCloudSync = document.getElementById('btn-cloud-sync');
 const syncIcon = document.getElementById('sync-icon');
 const syncStatus = document.getElementById('sync-status');
+const btnPublishFeed = document.getElementById('btn-publish-feed');
+const publishIcon = document.getElementById('publish-icon');
+const publishText = document.getElementById('publish-text');
 const btnDeleteEntry = document.getElementById('btn-delete-entry');
 
 // DOM Elements - Auth
@@ -80,9 +85,11 @@ let currentPhotoBlob = null;
 let currentPhotoUrl = null;
 let toastTimeout = null;
 
-// Journal & Auth State
+// Journal, Feed & Auth State
+let currentStreamMode = 'personal'; // 'personal' | 'community'
 let activeGalleryCategory = 'all';
 let allObservations = [];
+let communityFeedItems = [];
 let activeInspectionRecord = null;
 let createdGalleryUrls = [];
 let authMode = 'login';
@@ -97,7 +104,7 @@ function showToast(message, duration = 2200) {
   }, duration);
 }
 
-// ---------------- CAMERA & FILTERS ----------------
+// ---------------- CAMERA LOGIC ----------------
 
 function renderFilterCarousel() {
   filterCarousel.innerHTML = '';
@@ -216,7 +223,7 @@ function setViewMode(mode) {
   }
 }
 
-// ---------------- HYBRID JOURNAL & GALLERY ----------------
+// ---------------- DUAL-STREAM JOURNAL & COMMUNITY FEED ----------------
 
 function cleanupGalleryUrls() {
   createdGalleryUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -232,7 +239,7 @@ function renderJournalCategories() {
   allPill.addEventListener('click', () => {
     activeGalleryCategory = 'all';
     renderJournalCategories();
-    renderJournalGrid();
+    renderStreamGrid();
   });
   journalCategories.appendChild(allPill);
 
@@ -243,22 +250,27 @@ function renderJournalCategories() {
     pill.addEventListener('click', () => {
       activeGalleryCategory = cat.id;
       renderJournalCategories();
-      renderJournalGrid();
+      renderStreamGrid();
     });
     journalCategories.appendChild(pill);
   });
 }
 
-function renderJournalGrid() {
+function renderStreamGrid() {
   cleanupGalleryUrls();
   observationsGrid.innerHTML = '';
 
+  const activeSource = currentStreamMode === 'personal' ? allObservations : communityFeedItems;
+
   const filtered = activeGalleryCategory === 'all'
-    ? allObservations
-    : allObservations.filter((obs) => obs.category === activeGalleryCategory);
+    ? activeSource
+    : activeSource.filter((obs) => obs.category === activeGalleryCategory);
 
   if (filtered.length === 0) {
     emptyJournalMsg.classList.remove('hidden');
+    emptyJournalMsg.querySelector('p').innerHTML = currentStreamMode === 'personal'
+      ? 'Your journal is quiet.<br />Step outside and observe something living.'
+      : 'The community field is quiet.<br />Be the first to share an observation.';
     return;
   }
 
@@ -268,20 +280,18 @@ function renderJournalGrid() {
     const card = document.createElement('article');
     card.className = 'obs-card';
 
-    // HYBRID IMAGE SOURCE: Use local blob if present, otherwise Cloudinary CDN thumbnail
     let displayUrl = '';
     if (obs.photoBlob) {
       displayUrl = URL.createObjectURL(obs.photoBlob);
       createdGalleryUrls.push(displayUrl);
     } else if (obs.cloudUrl) {
-      displayUrl = CloudinaryUploader.getOptimizedUrl(obs.cloudUrl, 300);
+      displayUrl = CloudinaryUploader.getOptimizedUrl(obs.cloudUrl, 320);
     }
 
-    const formattedTime = new Date(obs.timestamp).toLocaleDateString('en-US', {
+    const timestampVal = obs.publishedAt ? obs.capturedAt : obs.timestamp;
+    const formattedTime = new Date(timestampVal).toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
+      day: 'numeric'
     });
 
     const categoryConfig = NATURE_CATEGORIES.find((c) => c.id === obs.category);
@@ -292,7 +302,7 @@ function renderJournalGrid() {
         <img src="${displayUrl}" alt="Nature observation" loading="lazy" />
       </div>
       <div class="obs-meta">
-        <span class="obs-meta-time">${formattedTime}</span>
+        ${currentStreamMode === 'community' && obs.authorName ? `<span class="obs-meta-author">@${obs.authorName}</span>` : `<span class="obs-meta-time">${formattedTime}</span>`}
         <span class="obs-meta-category">${catIcon}</span>
       </div>
     `;
@@ -305,11 +315,31 @@ function renderJournalGrid() {
   });
 }
 
+async function setStreamMode(mode) {
+  currentStreamMode = mode;
+  tabPersonal.classList.toggle('active', mode === 'personal');
+  tabCommunity.classList.toggle('active', mode === 'community');
+
+  if (mode === 'community') {
+    showToast('Consulting the field stream...');
+    try {
+      communityFeedItems = await CloudJournal.getPublicFeed();
+    } catch (err) {
+      showToast('Could not reach community feed');
+    }
+  }
+
+  renderStreamGrid();
+}
+
+tabPersonal.addEventListener('click', () => setStreamMode('personal'));
+tabCommunity.addEventListener('click', () => setStreamMode('community'));
+
 async function openJournalUI() {
   try {
     allObservations = await JournalStore.getAllObservations();
     renderJournalCategories();
-    renderJournalGrid();
+    renderStreamGrid();
     journalView.classList.remove('hidden');
   } catch (err) {
     console.error('Failed to open journal:', err);
@@ -325,13 +355,14 @@ function openDetailModal(record, displayUrl) {
   activeInspectionRecord = record;
   detailImage.src = record.cloudUrl || displayUrl;
 
-  detailDate.textContent = new Date(record.timestamp).toLocaleString('en-US', {
+  const timestampVal = record.capturedAt || record.timestamp;
+  detailDate.textContent = new Date(timestampVal).toLocaleString('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short'
   });
 
   const category = NATURE_CATEGORIES.find((c) => c.id === record.category);
-  detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${category ? category.label : 'Observation'}`;
+  detailCategoryLabel.textContent = `${category ? category.icon : '🌿'} ${category ? category.label : 'Observation'}${record.authorName ? ` by @${record.authorName}` : ''}`;
   detailSpecs.textContent = `${record.aspectRatio || '4:3'} • ${record.filter || 'natural'} • ${record.frame || 'raw'}`;
 
   if (record.caption && record.caption.trim().length > 0) {
@@ -341,17 +372,43 @@ function openDetailModal(record, displayUrl) {
     detailCaption.classList.add('hidden');
   }
 
-  // Cloud sync status button
-  if (record.syncedToFirestore && record.cloudUrl) {
-    btnCloudSync.classList.add('synced');
-    syncIcon.textContent = '✓';
-    syncStatus.textContent = 'Synced to Cloud';
-    btnCloudSync.disabled = true;
+  // Is this entry owned by the active user?
+  const isOwner = currentUser && (!record.authorId || record.authorId === currentUser.uid);
+
+  if (isOwner) {
+    btnDeleteEntry.classList.remove('hidden');
+    btnCloudSync.classList.remove('hidden');
+
+    // Cloud sync state
+    if (record.syncedToFirestore && record.cloudUrl) {
+      btnCloudSync.classList.add('synced');
+      syncIcon.textContent = '✓';
+      syncStatus.textContent = 'Synced to Cloud';
+      btnCloudSync.disabled = true;
+
+      // Enable community publishing
+      btnPublishFeed.classList.remove('hidden');
+      if (record.isPublic) {
+        btnPublishFeed.classList.add('published');
+        publishIcon.textContent = '🔒';
+        publishText.textContent = 'Make Private';
+      } else {
+        btnPublishFeed.classList.remove('published');
+        publishIcon.textContent = '🌍';
+        publishText.textContent = 'Share to Field';
+      }
+    } else {
+      btnCloudSync.classList.remove('synced');
+      syncIcon.textContent = '☁️';
+      syncStatus.textContent = record.cloudUrl ? 'Sync to Database' : 'Backup to Cloud';
+      btnCloudSync.disabled = false;
+      btnPublishFeed.classList.add('hidden');
+    }
   } else {
-    btnCloudSync.classList.remove('synced');
-    syncIcon.textContent = '☁️';
-    syncStatus.textContent = record.cloudUrl ? 'Sync to Database' : 'Backup to Cloud';
-    btnCloudSync.disabled = false;
+    // Browsing someone else's observation in "The Wild"
+    btnDeleteEntry.classList.add('hidden');
+    btnCloudSync.classList.add('hidden');
+    btnPublishFeed.classList.add('hidden');
   }
 
   detailModal.classList.remove('hidden');
@@ -363,7 +420,36 @@ function closeDetailModalUI() {
   detailImage.src = '';
 }
 
-// ---------------- AUTH & CLOUD SYNC ----------------
+// ---------------- COMMUNITY PUBLISHING ----------------
+
+btnPublishFeed.addEventListener('click', async () => {
+  if (!activeInspectionRecord || !currentUser) return;
+
+  btnPublishFeed.disabled = true;
+  const targetPublicState = !activeInspectionRecord.isPublic;
+
+  try {
+    await CloudJournal.setPublicStatus(
+      currentUser.uid,
+      currentUser.email,
+      activeInspectionRecord,
+      targetPublicState
+    );
+
+    activeInspectionRecord.isPublic = targetPublicState;
+    btnPublishFeed.classList.toggle('published', targetPublicState);
+    publishIcon.textContent = targetPublicState ? '🔒' : '🌍';
+    publishText.textContent = targetPublicState ? 'Make Private' : 'Share to Field';
+
+    showToast(targetPublicState ? 'Published to The Wild!' : 'Retracted from public field');
+  } catch (err) {
+    showToast(`Publish error: ${err.message}`);
+  } finally {
+    btnPublishFeed.disabled = false;
+  }
+});
+
+// ---------------- AUTH & SYNC ----------------
 
 async function syncCloudObservationsToLocal(userId) {
   try {
@@ -371,8 +457,8 @@ async function syncCloudObservationsToLocal(userId) {
     if (cloudRecords.length > 0) {
       await JournalStore.mergeCloudRecords(cloudRecords);
       allObservations = await JournalStore.getAllObservations();
-      if (!journalView.classList.contains('hidden')) {
-        renderJournalGrid();
+      if (!journalView.classList.contains('hidden') && currentStreamMode === 'personal') {
+        renderStreamGrid();
       }
       showToast(`Restored ${cloudRecords.length} moments from cloud`);
     }
@@ -392,7 +478,6 @@ function updateAuthUI(user) {
     authTitle.textContent = 'Observer Profile';
     authSubtitle.textContent = 'Account active & verified';
 
-    // Automatically reconcile cloud journal on login
     syncCloudObservationsToLocal(user.uid);
   } else {
     authStatusIcon.textContent = '👤';
@@ -503,7 +588,6 @@ btnOpenJournal.addEventListener('click', () => {
   openJournalUI();
 });
 
-// Dual Cloud Sync
 btnCloudSync.addEventListener('click', async () => {
   if (!activeInspectionRecord) return;
 
@@ -545,6 +629,9 @@ btnCloudSync.addEventListener('click', async () => {
     btnCloudSync.classList.add('synced');
     syncIcon.textContent = '✓';
     syncStatus.textContent = 'Synced to Cloud';
+    
+    // Reveal publish button
+    btnPublishFeed.classList.remove('hidden');
     showToast('Observation written to Firestore!');
   } catch (err) {
     console.error('Sync failed:', err);
@@ -568,7 +655,7 @@ btnDeleteEntry.addEventListener('click', async () => {
     history.back();
     showToast('Observation deleted');
     allObservations = await JournalStore.getAllObservations();
-    renderJournalGrid();
+    renderStreamGrid();
   } catch (err) {
     console.error('Delete failed:', err);
     showToast('Failed to delete');
@@ -683,7 +770,7 @@ AuthManager.onAuthStateChange((user) => {
 
 document.addEventListener('DOMContentLoaded', initCamera);
 
-// ---------------- SERVICE WORKER & OFFLINE ----------------
+// ---------------- SERVICE WORKER ----------------
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {

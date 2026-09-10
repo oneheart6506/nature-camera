@@ -237,3 +237,67 @@
 .btn-delete:active {
   background: rgba(255, 107, 107, 0.25);
 }
+
+
+/* Segmented Stream Switcher (My Journal vs The Wild) */
+.stream-switch {
+  display: flex;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-bg-subtle);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  gap: 2px;
+}
+
+.btn-stream-tab {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  color: var(--color-forest-600);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.btn-stream-tab.active {
+  background: var(--color-forest-900);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* Author handle badge on public cards */
+.obs-meta-author {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-forest-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+}
+
+/* Community Publish Button */
+.btn-publish {
+  background: rgba(98, 130, 105, 0.15);
+  border: 1px solid var(--color-forest-400);
+  color: #a3d4ac;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: all 0.2s ease;
+}
+
+.btn-publish:active {
+  transform: scale(0.96);
+  background: rgba(98, 130, 105, 0.3);
+}
+
+.btn-publish.published {
+  background: rgba(220, 160, 72, 0.2);
+  border-color: var(--color-sunlight);
+  color: var(--color-sunlight);
+}
