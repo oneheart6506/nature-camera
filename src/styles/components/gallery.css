@@ -1,3 +1,7 @@
+/* ==========================================================================
+   CHEF'S KISS GALLERY, FOLIO & INSPECTOR DESIGN SYSTEM
+   ========================================================================== */
+
 /* Fullscreen Journal & Feed View */
 .journal-view {
   position: fixed;
@@ -48,7 +52,7 @@
   background: var(--text-primary);
   color: var(--text-inverse);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 /* Category Filter Bar */
@@ -104,7 +108,9 @@
   cursor: pointer;
 }
 
-.obs-card:active { transform: scale(0.97); }
+.obs-card:active {
+  transform: scale(0.97);
+}
 
 .obs-thumbnail-wrap {
   width: 100%;
@@ -135,7 +141,9 @@
   color: var(--text-muted);
 }
 
-.obs-meta-category { font-size: 0.8rem; }
+.obs-meta-category {
+  font-size: 0.8rem;
+}
 
 .obs-meta-author {
   font-family: var(--font-mono);
@@ -173,7 +181,9 @@
   line-height: 1.6;
 }
 
-/* DETAIL INSPECTOR MODAL */
+/* ==========================================================================
+   DETAIL INSPECTOR MODAL
+   ========================================================================== */
 .detail-modal {
   position: fixed;
   inset: 0;
@@ -198,6 +208,25 @@
   padding-bottom: 8px;
 }
 
+/* Grouping for Export and Close buttons */
+.detail-header .hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Export Button Accent */
+#btn-export-plate {
+  background: var(--accent-sunlight-glow);
+  border-color: var(--border-focus);
+  color: var(--accent-sunlight);
+}
+
+#btn-export-plate:active {
+  background: rgba(223, 168, 79, 0.32);
+  transform: scale(0.94);
+}
+
 .detail-body {
   position: relative;
   flex: 1;
@@ -216,7 +245,7 @@
   box-shadow: var(--shadow-lg);
 }
 
-/* The Balanced 2x2 Inspector Command Matrix */
+/* 2x2 Inspector Command Matrix */
 .detail-footer {
   display: flex;
   flex-direction: column;
@@ -310,12 +339,15 @@
   transition: all 0.2s ease;
 }
 
-.btn-matrix-action:active { transform: scale(0.96); }
+.btn-matrix-action:active {
+  transform: scale(0.96);
+}
 
 /* Cloud Sync States */
 .btn-cloud-sync {
   color: var(--accent-sunlight);
 }
+
 .btn-cloud-sync.synced {
   background: var(--accent-forest-soft);
   border-color: var(--accent-forest);
@@ -326,6 +358,7 @@
 .btn-publish {
   color: var(--text-secondary);
 }
+
 .btn-publish.published {
   background: var(--accent-sunlight-glow);
   border-color: var(--accent-sunlight);
@@ -336,6 +369,7 @@
 .btn-resonance {
   color: var(--accent-dewdrop);
 }
+
 .btn-resonance.resonated {
   background: var(--accent-sunlight-glow);
   border-color: var(--accent-sunlight);
@@ -350,7 +384,9 @@
   color: var(--accent-danger);
 }
 
-/* NATURALIST FOLIO MODAL */
+/* ==========================================================================
+   NATURALIST FOLIO MODAL
+   ========================================================================== */
 .folio-modal {
   position: fixed;
   inset: 0;
