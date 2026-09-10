@@ -32,15 +32,16 @@ export class JournalStore {
 
       const record = {
         id: entry.id || `obs_${Date.now()}`,
-        photoBlob: entry.photoBlob,
+        photoBlob: entry.photoBlob || null,
         category: entry.category || 'plants',
         filter: entry.filter || 'natural',
         aspectRatio: entry.aspectRatio || '4:3',
         frame: entry.frame || 'none',
-        timestamp: entry.timestamp || Date.now(),
+        timestamp: entry.timestamp || entry.capturedAt || Date.now(),
         caption: entry.caption || '',
         cloudUrl: entry.cloudUrl || null,
-        publicId: entry.publicId || null
+        publicId: entry.publicId || null,
+        syncedToFirestore: entry.syncedToFirestore || false
       };
 
       const request = store.put(record);
@@ -75,6 +76,50 @@ export class JournalStore {
 
       getReq.onerror = () => reject(getReq.error);
       tx.oncomplete = () => db.close();
+    });
+  }
+
+  /**
+   * Merges cloud observations from Firestore into local IndexedDB.
+   * Preserves existing local photoBlob if present.
+   */
+  static async mergeCloudRecords(cloudRecords) {
+    if (!cloudRecords || cloudRecords.length === 0) return 0;
+
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      let mergedCount = 0;
+
+      cloudRecords.forEach((cRec) => {
+        const getReq = store.get(cRec.id);
+        getReq.onsuccess = () => {
+          const existing = getReq.result;
+          const merged = {
+            id: cRec.id,
+            photoBlob: existing ? existing.photoBlob : null,
+            category: cRec.category,
+            caption: cRec.caption || '',
+            filter: cRec.filter || 'natural',
+            aspectRatio: cRec.aspectRatio || '4:3',
+            frame: cRec.frame || 'none',
+            timestamp: cRec.capturedAt || Date.now(),
+            cloudUrl: cRec.cloudUrl,
+            publicId: cRec.publicId,
+            syncedToFirestore: true
+          };
+
+          store.put(merged);
+          mergedCount++;
+        };
+      });
+
+      tx.oncomplete = () => {
+        db.close();
+        resolve(mergedCount);
+      };
+      tx.onerror = () => reject(tx.error);
     });
   }
 

@@ -5,6 +5,10 @@ import {
   doc,
   setDoc,
   deleteDoc,
+  collection,
+  getDocs,
+  query,
+  orderBy,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../constants/firebase.js';
@@ -42,6 +46,32 @@ export class CloudJournal {
     }
   }
 
+  /**
+   * Fetches all cloud observations for the authenticated user ordered newest first.
+   */
+  static async fetchUserObservations(userId) {
+    if (!userId) return [];
+
+    try {
+      const obsRef = collection(db, 'users', userId, 'observations');
+      const q = query(obsRef, orderBy('capturedAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+
+      const records = [];
+      querySnapshot.forEach((docSnap) => {
+        records.push(docSnap.data());
+      });
+
+      return records;
+    } catch (error) {
+      console.error('Failed to fetch user observations from Firestore:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes a cloud observation document.
+   */
   static async deleteFromCloud(userId, observationId) {
     if (!userId || !observationId) return;
 

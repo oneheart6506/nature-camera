@@ -9,10 +9,6 @@ import { NATURE_FILTERS, DEFAULT_FILTER_ID } from './constants/filters.js';
 import { NATURE_FRAMES, DEFAULT_FRAME_ID } from './constants/frames.js';
 import { NATURE_CATEGORIES, DEFAULT_CATEGORY_ID } from './constants/categories.js';
 
-
-
-
-
 // DOM Elements - Camera
 const videoElement = document.getElementById('camera-video');
 const previewImage = document.getElementById('preview-image');
@@ -37,7 +33,7 @@ const btnRetry = document.getElementById('btn-retry');
 const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toast-msg');
 
-// DOM Elements - Journal & Inspector
+// DOM Elements - Journal & Modal
 const btnOpenJournal = document.getElementById('btn-open-journal');
 const journalView = document.getElementById('journal-view');
 const btnCloseJournal = document.getElementById('btn-close-journal');
@@ -51,12 +47,12 @@ const detailDate = document.getElementById('detail-date');
 const detailCategoryLabel = document.getElementById('detail-category-label');
 const detailSpecs = document.getElementById('detail-specs');
 const detailCaption = document.getElementById('detail-caption');
-const btnDeleteEntry = document.getElementById('btn-delete-entry');
 const btnCloudSync = document.getElementById('btn-cloud-sync');
 const syncIcon = document.getElementById('sync-icon');
 const syncStatus = document.getElementById('sync-status');
+const btnDeleteEntry = document.getElementById('btn-delete-entry');
 
-// DOM Elements - Authentication
+// DOM Elements - Auth
 const btnAuthStatus = document.getElementById('btn-auth-status');
 const authStatusIcon = document.getElementById('auth-status-icon');
 const authStatusText = document.getElementById('auth-status-text');
@@ -74,11 +70,6 @@ const authProfileView = document.getElementById('auth-profile-view');
 const profileEmail = document.getElementById('profile-email');
 const btnLogout = document.getElementById('btn-logout');
 
-let authMode = 'login'; // 'login' or 'register'
-let currentUser = null;
-
-
-
 const camera = new CameraEngine(videoElement);
 
 let currentRatioKey = DEFAULT_ASPECT_RATIO;
@@ -89,11 +80,13 @@ let currentPhotoBlob = null;
 let currentPhotoUrl = null;
 let toastTimeout = null;
 
-// Journal State
+// Journal & Auth State
 let activeGalleryCategory = 'all';
 let allObservations = [];
 let activeInspectionRecord = null;
 let createdGalleryUrls = [];
+let authMode = 'login';
+let currentUser = null;
 
 function showToast(message, duration = 2200) {
   if (toastTimeout) clearTimeout(toastTimeout);
@@ -103,6 +96,8 @@ function showToast(message, duration = 2200) {
     toast.classList.remove('show');
   }, duration);
 }
+
+// ---------------- CAMERA & FILTERS ----------------
 
 function renderFilterCarousel() {
   filterCarousel.innerHTML = '';
@@ -221,7 +216,7 @@ function setViewMode(mode) {
   }
 }
 
-// ---------------- JOURNAL & GALLERY LOGIC ----------------
+// ---------------- HYBRID JOURNAL & GALLERY ----------------
 
 function cleanupGalleryUrls() {
   createdGalleryUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -273,8 +268,14 @@ function renderJournalGrid() {
     const card = document.createElement('article');
     card.className = 'obs-card';
 
-    const thumbUrl = URL.createObjectURL(obs.photoBlob);
-    createdGalleryUrls.push(thumbUrl);
+    // HYBRID IMAGE SOURCE: Use local blob if present, otherwise Cloudinary CDN thumbnail
+    let displayUrl = '';
+    if (obs.photoBlob) {
+      displayUrl = URL.createObjectURL(obs.photoBlob);
+      createdGalleryUrls.push(displayUrl);
+    } else if (obs.cloudUrl) {
+      displayUrl = CloudinaryUploader.getOptimizedUrl(obs.cloudUrl, 300);
+    }
 
     const formattedTime = new Date(obs.timestamp).toLocaleDateString('en-US', {
       month: 'short',
@@ -288,7 +289,7 @@ function renderJournalGrid() {
 
     card.innerHTML = `
       <div class="obs-thumbnail-wrap">
-        <img src="${thumbUrl}" alt="Nature observation" loading="lazy" />
+        <img src="${displayUrl}" alt="Nature observation" loading="lazy" />
       </div>
       <div class="obs-meta">
         <span class="obs-meta-time">${formattedTime}</span>
@@ -297,9 +298,8 @@ function renderJournalGrid() {
     `;
 
     card.addEventListener('click', () => {
-      // Push history state when opening detail inspection
       history.pushState({ modal: 'detail' }, '');
-      openDetailModal(obs, thumbUrl);
+      openDetailModal(obs, displayUrl);
     });
     observationsGrid.appendChild(card);
   });
@@ -321,9 +321,9 @@ function closeJournalUI() {
   cleanupGalleryUrls();
 }
 
-function openDetailModal(record, thumbUrl) {
+function openDetailModal(record, displayUrl) {
   activeInspectionRecord = record;
-  detailImage.src = thumbUrl;
+  detailImage.src = record.cloudUrl || displayUrl;
 
   detailDate.textContent = new Date(record.timestamp).toLocaleString('en-US', {
     dateStyle: 'medium',
@@ -341,8 +341,8 @@ function openDetailModal(record, thumbUrl) {
     detailCaption.classList.add('hidden');
   }
 
-  // Allow syncing if not yet in Firestore, or re-syncing if needed
-  if (record.syncedToFirestore) {
+  // Cloud sync status button
+  if (record.syncedToFirestore && record.cloudUrl) {
     btnCloudSync.classList.add('synced');
     syncIcon.textContent = '✓';
     syncStatus.textContent = 'Synced to Cloud';
@@ -357,254 +357,29 @@ function openDetailModal(record, thumbUrl) {
   detailModal.classList.remove('hidden');
 }
 
-
 function closeDetailModalUI() {
   detailModal.classList.add('hidden');
   activeInspectionRecord = null;
   detailImage.src = '';
 }
 
-// ---------------- ANDROID BACK BUTTON ROUTER ----------------
+// ---------------- AUTH & CLOUD SYNC ----------------
 
-window.addEventListener('popstate', () => {
-  // If the detail inspector is visible, close it
-  if (!detailModal.classList.contains('hidden')) {
-    closeDetailModalUI();
-    return;
-  }
-
-  // If the field journal is open, close it
-  if (!journalView.classList.contains('hidden')) {
-    closeJournalUI();
-    return;
-  }
-
-  // If we are currently reviewing a captured photo, discard and return to live camera
-  if (!reviewPanel.classList.contains('hidden')) {
-    setViewMode('live');
-    return;
-  }
-});
-
-// Explicit UI buttons delegate to native history back
-btnCloseDetail.addEventListener('click', () => history.back());
-btnCloseJournal.addEventListener('click', () => history.back());
-btnRetake.addEventListener('click', () => history.back());
-
-btnOpenJournal.addEventListener('click', () => {
-  history.pushState({ modal: 'journal' }, '');
-  openJournalUI();
-});
-
-// ---------------- INITIALIZATION & CAMERA ----------------
-
-async function initCamera() {
-  errorScreen.classList.add('hidden');
+async function syncCloudObservationsToLocal(userId) {
   try {
-    renderFilterCarousel();
-    applyFilter(DEFAULT_FILTER_ID);
-    applyAspectRatio(DEFAULT_ASPECT_RATIO);
-    applyFrame(DEFAULT_FRAME_ID);
-    await camera.start();
-    updatePreviewMirror();
-    setViewMode('live');
+    const cloudRecords = await CloudJournal.fetchUserObservations(userId);
+    if (cloudRecords.length > 0) {
+      await JournalStore.mergeCloudRecords(cloudRecords);
+      allObservations = await JournalStore.getAllObservations();
+      if (!journalView.classList.contains('hidden')) {
+        renderJournalGrid();
+      }
+      showToast(`Restored ${cloudRecords.length} moments from cloud`);
+    }
   } catch (err) {
-    showError(err);
+    console.warn('Could not sync cloud observations down:', err);
   }
 }
-
-function showError(err) {
-  errorScreen.classList.remove('hidden');
-  if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-    errorMessage.textContent = 'Camera permission denied. Allow access in Chrome site settings.';
-  } else if (err.name === 'NotFoundError') {
-    errorMessage.textContent = 'No camera sensor was detected on this device.';
-  } else {
-    errorMessage.textContent = `Camera error: ${err.message || 'Unable to open camera.'}`;
-  }
-}
-
-// Pipeline: Capture -> Frame Compositing -> Blob -> Push History State
-btnCapture.addEventListener('click', () => {
-  try {
-    const rawCanvas = camera.captureFrameCanvas();
-    const framedCanvas = FrameRenderer.applyFrame(rawCanvas, activeFrameId);
-
-    framedCanvas.toBlob((blob) => {
-      currentPhotoBlob = blob;
-      currentPhotoUrl = URL.createObjectURL(blob);
-      previewImage.src = currentPhotoUrl;
-
-      // Push history state so Android back gesture cancels the review instead of closing page
-      history.pushState({ view: 'review' }, '');
-      setViewMode('review');
-    }, 'image/jpeg', 0.92);
-  } catch (err) {
-    console.error('Capture pipeline failed:', err);
-  }
-});
-
-btnAspect.addEventListener('click', cycleAspectRatio);
-btnFrame.addEventListener('click', cycleFrame);
-
-btnFlip.addEventListener('click', async () => {
-  btnFlip.disabled = true;
-  try {
-    await camera.flipCamera();
-    updatePreviewMirror();
-  } catch (err) {
-    console.error('Failed to flip camera:', err);
-    showToast(`Lens error: ${err.name || 'Sensor busy'}`, 3500);
-  } finally {
-    btnFlip.disabled = false;
-  }
-});
-
-
-btnGridToggle.addEventListener('click', () => {
-  const isHidden = cameraGrid.classList.toggle('hidden');
-  btnGridToggle.classList.toggle('active', !isHidden);
-});
-
-// Save to IndexedDB & pop the review history state
-btnSave.addEventListener('click', async () => {
-  if (!currentPhotoBlob) return;
-  btnSave.disabled = true;
-
-  try {
-    const captionNote = inputCaption.value.trim();
-
-    await JournalStore.saveObservation({
-      photoBlob: currentPhotoBlob,
-      category: selectedCaptureCategory,
-      caption: captionNote,
-      filter: activeFilterId,
-      aspectRatio: currentRatioKey,
-      frame: activeFrameId,
-      timestamp: Date.now()
-    });
-
-    const categoryObj = NATURE_CATEGORIES.find((c) => c.id === selectedCaptureCategory);
-    showToast(`${categoryObj ? categoryObj.icon : '🌱'} Saved to Journal`);
-
-    // Go back in history (which closes review mode via popstate)
-    history.back();
-  } catch (err) {
-    console.error('Failed to save to IndexedDB:', err);
-    showToast('Storage error');
-  } finally {
-    btnSave.disabled = false;
-  }
-});
-
-btnDeleteEntry.addEventListener('click', async () => {
-  if (!activeInspectionRecord) return;
-
-  try {
-    const user = AuthManager.getCurrentUser();
-
-    // 1. Delete from Cloud Firestore if user is authenticated
-    if (user && activeInspectionRecord.cloudUrl) {
-      await CloudJournal.deleteFromCloud(user.uid, activeInspectionRecord.id);
-    }
-
-    // 2. Delete from local device IndexedDB
-    await JournalStore.deleteObservation(activeInspectionRecord.id);
-
-    history.back();
-    showToast('Observation deleted');
-    allObservations = await JournalStore.getAllObservations();
-    renderJournalGrid();
-  } catch (err) {
-    console.error('Delete failed:', err);
-    showToast('Failed to delete');
-  }
-});
-
-
-// Dual Cloud Sync: Cloudinary Pixels -> Firestore Document
-btnCloudSync.addEventListener('click', async () => {
-  if (!activeInspectionRecord) return;
-
-  const user = AuthManager.getCurrentUser();
-  if (!user) {
-    showToast('Please sign in first');
-    openAuthModal();
-    return;
-  }
-
-  btnCloudSync.disabled = true;
-
-  try {
-    let cloudUrl = activeInspectionRecord.cloudUrl;
-    let publicId = activeInspectionRecord.publicId;
-
-    // Step 1: Upload image to Cloudinary if it hasn't been uploaded yet
-    if (!cloudUrl && activeInspectionRecord.photoBlob) {
-      syncIcon.textContent = '⏳';
-      syncStatus.textContent = 'Uploading image...';
-
-      const uploadResult = await CloudinaryUploader.uploadPhoto(activeInspectionRecord.photoBlob, [
-        'nature-journal',
-        activeInspectionRecord.category || 'general'
-      ]);
-      cloudUrl = uploadResult.cloudUrl;
-      publicId = uploadResult.publicId;
-
-      await JournalStore.updateObservationCloudData(activeInspectionRecord.id, uploadResult);
-      activeInspectionRecord.cloudUrl = cloudUrl;
-      activeInspectionRecord.publicId = publicId;
-    }
-
-    // Step 2: Write metadata to Cloud Firestore
-    syncIcon.textContent = '📡';
-    syncStatus.textContent = 'Syncing...';
-
-    await CloudJournal.syncObservation(user.uid, activeInspectionRecord);
-
-    activeInspectionRecord.syncedToFirestore = true;
-    btnCloudSync.classList.add('synced');
-    syncIcon.textContent = '✓';
-    syncStatus.textContent = 'Synced to Cloud';
-    showToast('Observation written to Firestore!');
-  } catch (err) {
-    console.error('Sync failed:', err);
-    btnCloudSync.disabled = false;
-    syncIcon.textContent = '⚠️';
-    syncStatus.textContent = 'Sync Failed';
-    showToast(`Error: ${err.message || 'Database write rejected'}`);
-  }
-});
-
-
-
-btnRetry.addEventListener('click', initCamera);
-
-document.addEventListener('DOMContentLoaded', initCamera);
-
-// ---------------- SERVICE WORKER & OFFLINE RESILIENCE ----------------
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      console.log('🌿 Nature Camera Service Worker active:', reg.scope);
-    } catch (err) {
-      console.error('Service Worker registration failed:', err);
-    }
-  });
-}
-
-// Listen for network connectivity shifts
-window.addEventListener('offline', () => {
-  showToast('Offline — Field Mode active', 3000);
-});
-
-window.addEventListener('online', () => {
-  showToast('Connection restored', 2500);
-});
-
-
 
 function updateAuthUI(user) {
   currentUser = user;
@@ -616,6 +391,9 @@ function updateAuthUI(user) {
     authProfileView.classList.remove('hidden');
     authTitle.textContent = 'Observer Profile';
     authSubtitle.textContent = 'Account active & verified';
+
+    // Automatically reconcile cloud journal on login
+    syncCloudObservationsToLocal(user.uid);
   } else {
     authStatusIcon.textContent = '👤';
     authStatusText.textContent = 'Sign In';
@@ -653,50 +431,8 @@ function closeAuthModalUI() {
   authPassword.value = '';
 }
 
-btnToggleAuthMode.addEventListener('click', () => {
-  setAuthMode(authMode === 'login' ? 'register' : 'login');
-});
+// ---------------- ANDROID BACK ROUTER ----------------
 
-btnAuthStatus.addEventListener('click', openAuthModal);
-btnCloseAuth.addEventListener('click', () => history.back());
-
-authForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = authEmail.value.trim();
-  const password = authPassword.value;
-
-  btnAuthSubmit.disabled = true;
-  btnAuthSubmit.textContent = 'Processing...';
-
-  try {
-    if (authMode === 'register') {
-      await AuthManager.register(email, password);
-      showToast('Observer account created!');
-    } else {
-      await AuthManager.login(email, password);
-      showToast('Welcome back, observer');
-    }
-    history.back(); // Closes modal via popstate
-  } catch (err) {
-    console.error('Auth error:', err);
-    showToast(err.message.replace('Firebase: ', ''));
-  } finally {
-    btnAuthSubmit.disabled = false;
-    btnAuthSubmit.textContent = authMode === 'register' ? 'Create Account' : 'Sign In';
-  }
-});
-
-btnLogout.addEventListener('click', async () => {
-  try {
-    await AuthManager.logout();
-    history.back();
-    showToast('Signed out');
-  } catch (err) {
-    showToast('Failed to sign out');
-  }
-});
-
-// Update Android Back-Button handler to handle Auth Modal
 window.addEventListener('popstate', () => {
   if (!authModal.classList.contains('hidden')) {
     closeAuthModalUI();
@@ -716,7 +452,254 @@ window.addEventListener('popstate', () => {
   }
 });
 
-// Subscribe to auth state on boot
+btnCloseDetail.addEventListener('click', () => history.back());
+btnCloseJournal.addEventListener('click', () => history.back());
+btnRetake.addEventListener('click', () => history.back());
+btnCloseAuth.addEventListener('click', () => history.back());
+btnAuthStatus.addEventListener('click', openAuthModal);
+
+btnToggleAuthMode.addEventListener('click', () => {
+  setAuthMode(authMode === 'login' ? 'register' : 'login');
+});
+
+authForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  btnAuthSubmit.disabled = true;
+  btnAuthSubmit.textContent = 'Processing...';
+
+  try {
+    if (authMode === 'register') {
+      await AuthManager.register(email, password);
+      showToast('Observer account created!');
+    } else {
+      await AuthManager.login(email, password);
+      showToast('Welcome back, observer');
+    }
+    history.back();
+  } catch (err) {
+    console.error('Auth error:', err);
+    showToast(err.message.replace('Firebase: ', ''));
+  } finally {
+    btnAuthSubmit.disabled = false;
+    btnAuthSubmit.textContent = authMode === 'register' ? 'Create Account' : 'Sign In';
+  }
+});
+
+btnLogout.addEventListener('click', async () => {
+  try {
+    await AuthManager.logout();
+    history.back();
+    showToast('Signed out');
+  } catch (err) {
+    showToast('Failed to sign out');
+  }
+});
+
+btnOpenJournal.addEventListener('click', () => {
+  history.pushState({ modal: 'journal' }, '');
+  openJournalUI();
+});
+
+// Dual Cloud Sync
+btnCloudSync.addEventListener('click', async () => {
+  if (!activeInspectionRecord) return;
+
+  const user = AuthManager.getCurrentUser();
+  if (!user) {
+    showToast('Please sign in first');
+    openAuthModal();
+    return;
+  }
+
+  btnCloudSync.disabled = true;
+
+  try {
+    let cloudUrl = activeInspectionRecord.cloudUrl;
+    let publicId = activeInspectionRecord.publicId;
+
+    if (!cloudUrl && activeInspectionRecord.photoBlob) {
+      syncIcon.textContent = '⏳';
+      syncStatus.textContent = 'Uploading image...';
+
+      const uploadResult = await CloudinaryUploader.uploadPhoto(activeInspectionRecord.photoBlob, [
+        'nature-journal',
+        activeInspectionRecord.category || 'general'
+      ]);
+      cloudUrl = uploadResult.cloudUrl;
+      publicId = uploadResult.publicId;
+
+      await JournalStore.updateObservationCloudData(activeInspectionRecord.id, uploadResult);
+      activeInspectionRecord.cloudUrl = cloudUrl;
+      activeInspectionRecord.publicId = publicId;
+    }
+
+    syncIcon.textContent = '📡';
+    syncStatus.textContent = 'Syncing...';
+
+    await CloudJournal.syncObservation(user.uid, activeInspectionRecord);
+
+    activeInspectionRecord.syncedToFirestore = true;
+    btnCloudSync.classList.add('synced');
+    syncIcon.textContent = '✓';
+    syncStatus.textContent = 'Synced to Cloud';
+    showToast('Observation written to Firestore!');
+  } catch (err) {
+    console.error('Sync failed:', err);
+    btnCloudSync.disabled = false;
+    syncIcon.textContent = '⚠️';
+    syncStatus.textContent = 'Sync Failed';
+    showToast(`Error: ${err.message || 'Database write rejected'}`);
+  }
+});
+
+btnDeleteEntry.addEventListener('click', async () => {
+  if (!activeInspectionRecord) return;
+
+  try {
+    const user = AuthManager.getCurrentUser();
+    if (user && activeInspectionRecord.syncedToFirestore) {
+      await CloudJournal.deleteFromCloud(user.uid, activeInspectionRecord.id);
+    }
+
+    await JournalStore.deleteObservation(activeInspectionRecord.id);
+    history.back();
+    showToast('Observation deleted');
+    allObservations = await JournalStore.getAllObservations();
+    renderJournalGrid();
+  } catch (err) {
+    console.error('Delete failed:', err);
+    showToast('Failed to delete');
+  }
+});
+
+// ---------------- INITIALIZATION & HARDWARE ----------------
+
+async function initCamera() {
+  errorScreen.classList.add('hidden');
+  try {
+    renderFilterCarousel();
+    applyFilter(DEFAULT_FILTER_ID);
+    applyAspectRatio(DEFAULT_ASPECT_RATIO);
+    applyFrame(DEFAULT_FRAME_ID);
+    await camera.start();
+    updatePreviewMirror();
+    setViewMode('live');
+
+    const totalEntries = await JournalStore.getCount();
+    if (totalEntries > 0) {
+      showToast(`${totalEntries} observations in journal`);
+    }
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function showError(err) {
+  errorScreen.classList.remove('hidden');
+  if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+    errorMessage.textContent = 'Camera permission denied. Allow access in Chrome site settings.';
+  } else if (err.name === 'NotFoundError') {
+    errorMessage.textContent = 'No camera sensor was detected on this device.';
+  } else {
+    errorMessage.textContent = `Camera error: ${err.message || 'Unable to open camera.'}`;
+  }
+}
+
+btnCapture.addEventListener('click', () => {
+  try {
+    const rawCanvas = camera.captureFrameCanvas();
+    const framedCanvas = FrameRenderer.applyFrame(rawCanvas, activeFrameId);
+
+    framedCanvas.toBlob((blob) => {
+      currentPhotoBlob = blob;
+      currentPhotoUrl = URL.createObjectURL(blob);
+      previewImage.src = currentPhotoUrl;
+
+      history.pushState({ view: 'review' }, '');
+      setViewMode('review');
+    }, 'image/jpeg', 0.92);
+  } catch (err) {
+    console.error('Capture pipeline failed:', err);
+  }
+});
+
+btnAspect.addEventListener('click', cycleAspectRatio);
+btnFrame.addEventListener('click', cycleFrame);
+
+btnFlip.addEventListener('click', async () => {
+  btnFlip.disabled = true;
+  try {
+    await camera.flipCamera();
+    updatePreviewMirror();
+  } catch (err) {
+    console.error('Failed to flip camera:', err);
+    showToast(`Lens error: ${err.name || 'Sensor busy'}`, 3500);
+  } finally {
+    btnFlip.disabled = false;
+  }
+});
+
+btnGridToggle.addEventListener('click', () => {
+  const isHidden = cameraGrid.classList.toggle('hidden');
+  btnGridToggle.classList.toggle('active', !isHidden);
+});
+
+btnSave.addEventListener('click', async () => {
+  if (!currentPhotoBlob) return;
+  btnSave.disabled = true;
+
+  try {
+    const captionNote = inputCaption.value.trim();
+
+    await JournalStore.saveObservation({
+      photoBlob: currentPhotoBlob,
+      category: selectedCaptureCategory,
+      caption: captionNote,
+      filter: activeFilterId,
+      aspectRatio: currentRatioKey,
+      frame: activeFrameId,
+      timestamp: Date.now()
+    });
+
+    const categoryObj = NATURE_CATEGORIES.find((c) => c.id === selectedCaptureCategory);
+    showToast(`${categoryObj ? categoryObj.icon : '🌱'} Saved to Journal`);
+    history.back();
+  } catch (err) {
+    console.error('Failed to save to IndexedDB:', err);
+    showToast('Storage error');
+  } finally {
+    btnSave.disabled = false;
+  }
+});
+
+btnRetry.addEventListener('click', initCamera);
+
 AuthManager.onAuthStateChange((user) => {
   updateAuthUI(user);
+});
+
+document.addEventListener('DOMContentLoaded', initCamera);
+
+// ---------------- SERVICE WORKER & OFFLINE ----------------
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      console.log('🌿 Nature Camera Service Worker active:', reg.scope);
+    } catch (err) {
+      console.error('Service Worker registration failed:', err);
+    }
+  });
+}
+
+window.addEventListener('offline', () => {
+  showToast('Offline — Field Mode active', 3000);
+});
+
+window.addEventListener('online', () => {
+  showToast('Connection restored', 2500);
 });
