@@ -1,9 +1,11 @@
 /**
  * cloudJournal.js - Cloud Firestore synchronization & community feed engine.
  */
+
 import {
   doc,
   setDoc,
+  updateDoc,
   deleteDoc,
   collection,
   getDocs,
@@ -11,19 +13,29 @@ import {
   where,
   orderBy,
   limit,
+  arrayUnion,
+  arrayRemove,
   serverTimestamp
 } from 'firebase/firestore';
+
 import { db } from '../../constants/firebase.js';
 
 export class CloudJournal {
+
   static async syncObservation(userId, record) {
     if (!userId) {
       throw new Error('User must be authenticated to sync with cloud.');
     }
 
-    const docRef = doc(db, 'users', userId, 'observations', record.id);
+    const docRef = doc(
+      db,
+      'users',
+      userId,
+      'observations',
+      record.id
+    );
 
-        const cloudPayload = {
+    const cloudPayload = {
       id: record.id,
       category: record.category || 'plants',
       caption: record.caption || '',
@@ -32,12 +44,17 @@ export class CloudJournal {
       frame: record.frame || 'none',
       cloudUrl: record.cloudUrl || null,
       publicId: record.publicId || null,
+
       // Prevents Firestore crash when timestamp is undefined
-      capturedAt: record.timestamp || record.capturedAt || Date.now(),
+      capturedAt:
+        record.timestamp ||
+        record.capturedAt ||
+        Date.now(),
+
       syncedAt: serverTimestamp(),
+
       isPublic: record.isPublic || false
     };
-
 
     try {
       await setDoc(docRef, cloudPayload, { merge: true });
@@ -48,17 +65,42 @@ export class CloudJournal {
     }
   }
 
-    /**
+
+  /**
    * Publishes or unpublishes an observation to the global community feed.
    */
-  static async setPublicStatus(userId, userEmail, record, isPublic) {
-    if (!userId) throw new Error('Sign in required to publish.');
-    if (!record.cloudUrl) throw new Error('Photo must be cloud-backed before publishing.');
+  static async setPublicStatus(
+    userId,
+    userEmail,
+    record,
+    isPublic
+  ) {
+    if (!userId) {
+      throw new Error('Sign in required to publish.');
+    }
 
-    const publicRef = doc(db, 'public_observations', record.id);
-    const userDocRef = doc(db, 'users', userId, 'observations', record.id);
+    if (!record.cloudUrl) {
+      throw new Error(
+        'Photo must be cloud-backed before publishing.'
+      );
+    }
+
+    const publicRef = doc(
+      db,
+      'public_observations',
+      record.id
+    );
+
+    const userDocRef = doc(
+      db,
+      'users',
+      userId,
+      'observations',
+      record.id
+    );
 
     if (isPublic) {
+
       const publicPayload = {
         id: record.id,
         authorId: userId,
@@ -69,88 +111,226 @@ export class CloudJournal {
         aspectRatio: record.aspectRatio || '4:3',
         frame: record.frame || 'none',
         cloudUrl: record.cloudUrl,
+
         // Fallbacks prevent Firestore setDoc undefined crashes
-        capturedAt: record.capturedAt || record.timestamp || Date.now(),
+        capturedAt:
+          record.capturedAt ||
+          record.timestamp ||
+          Date.now(),
+
         publishedAt: serverTimestamp()
       };
-      await setDoc(publicRef, publicPayload);
-      await setDoc(userDocRef, { isPublic: true }, { merge: true });
+
+      await setDoc(
+        publicRef,
+        publicPayload
+      );
+
+      await setDoc(
+        userDocRef,
+        { isPublic: true },
+        { merge: true }
+      );
+
     } else {
+
       await deleteDoc(publicRef);
-      await setDoc(userDocRef, { isPublic: false }, { merge: true });
+
+      await setDoc(
+        userDocRef,
+        { isPublic: false },
+        { merge: true }
+      );
+    }
+  }
+
+
+  /**
+   * Toggles an observer's resonance (dewdrop)
+   * on a public observation.
+   */
+  static async toggleResonance(
+    observationId,
+    userId,
+    currentlyResonated
+  ) {
+    if (!observationId || !userId) return;
+
+    const docRef = doc(
+      db,
+      'public_observations',
+      observationId
+    );
+
+    try {
+      await updateDoc(docRef, {
+        resonances: currentlyResonated
+          ? arrayRemove(userId)
+          : arrayUnion(userId)
+      });
+
+      return !currentlyResonated;
+
+    } catch (error) {
+      console.error(
+        'Failed to toggle resonance:',
+        error
+      );
+
+      throw error;
     }
   }
 
 
   static async getPublicFeed(maxRecords = 30) {
     try {
-      const publicCol = collection(db, 'public_observations');
-      const q = query(publicCol, orderBy('publishedAt', 'desc'), limit(maxRecords));
+      const publicCol = collection(
+        db,
+        'public_observations'
+      );
+
+      const q = query(
+        publicCol,
+        orderBy('publishedAt', 'desc'),
+        limit(maxRecords)
+      );
+
       const snapshot = await getDocs(q);
 
       const feed = [];
-      snapshot.forEach((d) => feed.push(d.data()));
+
+      snapshot.forEach((d) => {
+        feed.push(d.data());
+      });
+
       return feed;
+
     } catch (error) {
-      console.error('Failed to load community feed:', error);
+      console.error(
+        'Failed to load community feed:',
+        error
+      );
+
       throw error;
     }
   }
 
+
   /**
-   * Fetches all public contributions from a specific author.
+   * Fetches all public contributions
+   * from a specific author.
    */
   static async getObserverPublicFolio(authorId) {
     if (!authorId) return [];
 
     try {
-      const publicCol = collection(db, 'public_observations');
-      const q = query(publicCol, where('authorId', '==', authorId));
+      const publicCol = collection(
+        db,
+        'public_observations'
+      );
+
+      const q = query(
+        publicCol,
+        where('authorId', '==', authorId)
+      );
+
       const snapshot = await getDocs(q);
 
       const folio = [];
-      snapshot.forEach((d) => folio.push(d.data()));
+
+      snapshot.forEach((d) => {
+        folio.push(d.data());
+      });
 
       // Sort newest first in memory
       return folio.sort((a, b) => {
         const timeA = a.capturedAt || 0;
         const timeB = b.capturedAt || 0;
+
         return timeB - timeA;
       });
+
     } catch (error) {
-      console.error('Failed to load observer folio:', error);
+      console.error(
+        'Failed to load observer folio:',
+        error
+      );
+
       throw error;
     }
   }
+
 
   static async fetchUserObservations(userId) {
     if (!userId) return [];
 
     try {
-      const obsRef = collection(db, 'users', userId, 'observations');
-      const q = query(obsRef, orderBy('capturedAt', 'desc'));
+      const obsRef = collection(
+        db,
+        'users',
+        userId,
+        'observations'
+      );
+
+      const q = query(
+        obsRef,
+        orderBy('capturedAt', 'desc')
+      );
+
       const querySnapshot = await getDocs(q);
 
       const records = [];
+
       querySnapshot.forEach((docSnap) => {
         records.push(docSnap.data());
       });
 
       return records;
+
     } catch (error) {
-      console.error('Failed to fetch user observations:', error);
+      console.error(
+        'Failed to fetch user observations:',
+        error
+      );
+
       throw error;
     }
   }
 
-  static async deleteFromCloud(userId, observationId) {
+
+  static async deleteFromCloud(
+    userId,
+    observationId
+  ) {
     if (!userId || !observationId) return;
 
     try {
-      await deleteDoc(doc(db, 'users', userId, 'observations', observationId));
-      await deleteDoc(doc(db, 'public_observations', observationId));
+
+      await deleteDoc(
+        doc(
+          db,
+          'users',
+          userId,
+          'observations',
+          observationId
+        )
+      );
+
+      await deleteDoc(
+        doc(
+          db,
+          'public_observations',
+          observationId
+        )
+      );
+
     } catch (error) {
-      console.error('Failed to purge cloud document:', error);
+
+      console.error(
+        'Failed to purge cloud document:',
+        error
+      );
+
       throw error;
     }
   }
