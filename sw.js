@@ -1,8 +1,7 @@
 /**
- * sw.js - Service Worker for Nature Camera
- * Provides offline App Shell caching and instantaneous boots.
+ * sw.js - Network-First for HTML/Code, Cache-Fallback for Offline
  */
-const CACHE_NAME = 'nature-cam-v1.8'; // BUMP TO v1.3
+const CACHE_NAME = 'nature-cam-v2.0';
 
 const APP_SHELL = [
   '/',
@@ -32,51 +31,41 @@ const APP_SHELL = [
   '/src/constants/firebase.js'
 ];
 
-
-// 1. INSTALL: Pre-cache the App Shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('🌿 Precaching Nature Camera app shell...');
-      return cache.addAll(APP_SHELL);
-    }).then(() => self.skipWaiting()) // Activate new SW immediately
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
 });
 
-// 2. ACTIVATE: Purge older cache versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('🧹 Removing obsolete cache:', key);
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim()) // Take control of all open pages immediately
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// 3. FETCH: Cache-first strategy for instant offline loads
+// Network-First for navigations, Cache-First for static assets
 self.addEventListener('fetch', (event) => {
-  // Only handle standard GET requests
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse; // Return cached asset instantly
-      }
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return res;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
 
-      // If not in cache, request from network
-      return fetch(event.request).catch(() => {
-        // Fallback to cached index.html for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
-    })
+  event.respondWith(
+    caches.match(event.request).then((cached) => cached || fetch(event.request))
   );
 });

@@ -1,5 +1,5 @@
 /**
- * cameraEngine.js - Manages device media streams, lens selection, geometric slicing, and filter baking.
+ * cameraEngine.js - Resilient hardware camera streamer with watchdog timeout.
  */
 export class CameraEngine {
   constructor(videoElement) {
@@ -12,14 +12,12 @@ export class CameraEngine {
   }
 
   async start(preferredFacingMode = this.facingMode) {
-    // 1. Fully stop and release previous sensor
     this.stop();
     this.facingMode = preferredFacingMode;
 
-    // 2. Hardware cooldown buffer: gives Android HAL time to release the lens
-    await new Promise((resolve) => setTimeout(resolve, 180));
+    // Give Android HAL hardware driver time to release previous sensor
+    await new Promise((r) => setTimeout(r, 120));
 
-    // 3. Flexible resolution constraints: front selfie lenses need more relaxed bounds
     const isFront = this.facingMode === 'user';
     const primaryConstraints = {
       audio: false,
@@ -32,10 +30,8 @@ export class CameraEngine {
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia(primaryConstraints);
-    } catch (primaryErr) {
-      console.warn(`High-res stream rejected for ${this.facingMode}, attempting minimal fallback:`, primaryErr);
-      
-      // Fallback: minimal constraints without fixed resolution boundaries
+    } catch (err) {
+      console.warn('Fallback to basic constraints for lens:', this.facingMode, err);
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: { facingMode: { ideal: this.facingMode } }
@@ -45,11 +41,25 @@ export class CameraEngine {
     this.video.srcObject = this.stream;
     this.activeTrack = this.stream.getVideoTracks()[0];
 
+    // Safe play routine with timeout so promise NEVER hangs forever
     return new Promise((resolve) => {
-      this.video.onloadedmetadata = () => {
-        this.video.play();
-        resolve(this.activeTrack.getSettings());
+      let resolved = false;
+
+      const finish = () => {
+        if (!resolved) {
+          resolved = true;
+          this.video.play().catch(() => {});
+          resolve(this.activeTrack ? this.activeTrack.getSettings() : {});
+        }
       };
+
+      if (this.video.readyState >= 1) {
+        finish();
+      } else {
+        this.video.onloadedmetadata = finish;
+        // Watchdog timeout: unblocks after 1.5s even if event misses
+        setTimeout(finish, 1500);
+      }
     });
   }
 
