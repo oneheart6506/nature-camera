@@ -187,36 +187,42 @@
 
 .detail-footer {
   padding: var(--space-4);
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detail-actions-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2);
 }
 
-.detail-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.detail-info .detail-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-base);
-}
-
-.detail-info .detail-sub {
+.btn-cloud-sync {
+  background: rgba(220, 160, 72, 0.15);
+  border: 1px solid var(--color-sunlight);
+  color: var(--color-sunlight);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--color-camera-ui-muted);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: all 0.2s ease;
 }
 
-.detail-caption {
-  margin-top: var(--space-2);
-  font-family: var(--font-serif);
-  font-size: var(--text-sm);
-  color: var(--color-bg-base);
-  font-style: italic;
-  line-height: 1.4;
+.btn-cloud-sync:active {
+  transform: scale(0.96);
+  background: rgba(220, 160, 72, 0.3);
+}
+
+.btn-cloud-sync.synced {
+  background: rgba(98, 130, 105, 0.2);
+  border-color: var(--color-forest-400);
+  color: #a3d4ac;
 }
 
 .btn-delete {

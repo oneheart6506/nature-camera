@@ -1,10 +1,16 @@
 import { CameraEngine } from './modules/camera/cameraEngine.js';
 import { FrameRenderer } from './modules/canvas/frameRenderer.js';
 import { JournalStore } from './modules/storage/journalStore.js';
+import { CloudinaryUploader } from './modules/storage/cloudinaryUploader.js';
+import { AuthManager } from './modules/auth/authManager.js';
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from './constants/aspectRatios.js';
 import { NATURE_FILTERS, DEFAULT_FILTER_ID } from './constants/filters.js';
 import { NATURE_FRAMES, DEFAULT_FRAME_ID } from './constants/frames.js';
 import { NATURE_CATEGORIES, DEFAULT_CATEGORY_ID } from './constants/categories.js';
+
+
+
+
 
 // DOM Elements - Camera
 const videoElement = document.getElementById('camera-video');
@@ -45,6 +51,32 @@ const detailCategoryLabel = document.getElementById('detail-category-label');
 const detailSpecs = document.getElementById('detail-specs');
 const detailCaption = document.getElementById('detail-caption');
 const btnDeleteEntry = document.getElementById('btn-delete-entry');
+const btnCloudSync = document.getElementById('btn-cloud-sync');
+const syncIcon = document.getElementById('sync-icon');
+const syncStatus = document.getElementById('sync-status');
+
+// DOM Elements - Authentication
+const btnAuthStatus = document.getElementById('btn-auth-status');
+const authStatusIcon = document.getElementById('auth-status-icon');
+const authStatusText = document.getElementById('auth-status-text');
+const authModal = document.getElementById('auth-modal');
+const btnCloseAuth = document.getElementById('btn-close-auth');
+const authForm = document.getElementById('auth-form');
+const authTitle = document.getElementById('auth-title');
+const authSubtitle = document.getElementById('auth-subtitle');
+const authEmail = document.getElementById('auth-email');
+const authPassword = document.getElementById('auth-password');
+const btnAuthSubmit = document.getElementById('btn-auth-submit');
+const btnToggleAuthMode = document.getElementById('btn-toggle-auth-mode');
+const authTogglePrompt = document.getElementById('auth-toggle-prompt');
+const authProfileView = document.getElementById('auth-profile-view');
+const profileEmail = document.getElementById('profile-email');
+const btnLogout = document.getElementById('btn-logout');
+
+let authMode = 'login'; // 'login' or 'register'
+let currentUser = null;
+
+
 
 const camera = new CameraEngine(videoElement);
 
@@ -308,8 +340,22 @@ function openDetailModal(record, thumbUrl) {
     detailCaption.classList.add('hidden');
   }
 
+  // Update Cloud Sync Button state
+  if (record.cloudUrl) {
+    btnCloudSync.classList.add('synced');
+    syncIcon.textContent = '✓';
+    syncStatus.textContent = 'Backed up on Cloud';
+    btnCloudSync.disabled = true;
+  } else {
+    btnCloudSync.classList.remove('synced');
+    syncIcon.textContent = '☁️';
+    syncStatus.textContent = 'Backup to Cloud';
+    btnCloudSync.disabled = false;
+  }
+
   detailModal.classList.remove('hidden');
 }
+
 
 function closeDetailModalUI() {
   detailModal.classList.add('hidden');
@@ -465,6 +511,39 @@ btnDeleteEntry.addEventListener('click', async () => {
   }
 });
 
+// Upload local photo blob directly to Cloudinary
+btnCloudSync.addEventListener('click', async () => {
+  if (!activeInspectionRecord || !activeInspectionRecord.photoBlob) return;
+
+  btnCloudSync.disabled = true;
+  syncIcon.textContent = '⏳';
+  syncStatus.textContent = 'Uploading...';
+
+  try {
+    const uploadResult = await CloudinaryUploader.uploadPhoto(activeInspectionRecord.photoBlob, [
+      'nature-journal',
+      activeInspectionRecord.category || 'general'
+    ]);
+
+    // Update local IndexedDB with the new cloud CDN data
+    await JournalStore.updateObservationCloudData(activeInspectionRecord.id, uploadResult);
+    activeInspectionRecord.cloudUrl = uploadResult.cloudUrl;
+    activeInspectionRecord.publicId = uploadResult.publicId;
+
+    btnCloudSync.classList.add('synced');
+    syncIcon.textContent = '✓';
+    syncStatus.textContent = 'Backed up on Cloud';
+    showToast('Photo backed up to Cloud CDN!');
+  } catch (err) {
+    console.error('Cloud backup error:', err);
+    btnCloudSync.disabled = false;
+    syncIcon.textContent = '⚠️';
+    syncStatus.textContent = 'Upload Failed';
+    showToast(err.message || 'Upload failed');
+  }
+});
+
+
 btnRetry.addEventListener('click', initCamera);
 
 document.addEventListener('DOMContentLoaded', initCamera);
@@ -491,3 +570,119 @@ window.addEventListener('online', () => {
   showToast('Connection restored', 2500);
 });
 
+
+
+function updateAuthUI(user) {
+  currentUser = user;
+  if (user) {
+    authStatusIcon.textContent = '🌿';
+    authStatusText.textContent = user.email.split('@')[0];
+    profileEmail.textContent = user.email;
+    authForm.classList.add('hidden');
+    authProfileView.classList.remove('hidden');
+    authTitle.textContent = 'Observer Profile';
+    authSubtitle.textContent = 'Account active & verified';
+  } else {
+    authStatusIcon.textContent = '👤';
+    authStatusText.textContent = 'Sign In';
+    authForm.classList.remove('hidden');
+    authProfileView.classList.add('hidden');
+    setAuthMode('login');
+  }
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  if (mode === 'register') {
+    authTitle.textContent = 'Create Observer ID';
+    authSubtitle.textContent = 'Join the quiet nature observation network';
+    btnAuthSubmit.textContent = 'Create Account';
+    authTogglePrompt.textContent = 'Already have an ID?';
+    btnToggleAuthMode.textContent = 'Sign In';
+  } else {
+    authTitle.textContent = 'Observer Identity';
+    authSubtitle.textContent = 'Sign in to sync observations to the cloud';
+    btnAuthSubmit.textContent = 'Sign In';
+    authTogglePrompt.textContent = "Don't have an account?";
+    btnToggleAuthMode.textContent = 'Register';
+  }
+}
+
+function openAuthModal() {
+  history.pushState({ modal: 'auth' }, '');
+  authModal.classList.remove('hidden');
+}
+
+function closeAuthModalUI() {
+  authModal.classList.add('hidden');
+  authEmail.value = '';
+  authPassword.value = '';
+}
+
+btnToggleAuthMode.addEventListener('click', () => {
+  setAuthMode(authMode === 'login' ? 'register' : 'login');
+});
+
+btnAuthStatus.addEventListener('click', openAuthModal);
+btnCloseAuth.addEventListener('click', () => history.back());
+
+authForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  btnAuthSubmit.disabled = true;
+  btnAuthSubmit.textContent = 'Processing...';
+
+  try {
+    if (authMode === 'register') {
+      await AuthManager.register(email, password);
+      showToast('Observer account created!');
+    } else {
+      await AuthManager.login(email, password);
+      showToast('Welcome back, observer');
+    }
+    history.back(); // Closes modal via popstate
+  } catch (err) {
+    console.error('Auth error:', err);
+    showToast(err.message.replace('Firebase: ', ''));
+  } finally {
+    btnAuthSubmit.disabled = false;
+    btnAuthSubmit.textContent = authMode === 'register' ? 'Create Account' : 'Sign In';
+  }
+});
+
+btnLogout.addEventListener('click', async () => {
+  try {
+    await AuthManager.logout();
+    history.back();
+    showToast('Signed out');
+  } catch (err) {
+    showToast('Failed to sign out');
+  }
+});
+
+// Update Android Back-Button handler to handle Auth Modal
+window.addEventListener('popstate', () => {
+  if (!authModal.classList.contains('hidden')) {
+    closeAuthModalUI();
+    return;
+  }
+  if (!detailModal.classList.contains('hidden')) {
+    closeDetailModalUI();
+    return;
+  }
+  if (!journalView.classList.contains('hidden')) {
+    closeJournalUI();
+    return;
+  }
+  if (!reviewPanel.classList.contains('hidden')) {
+    setViewMode('live');
+    return;
+  }
+});
+
+// Subscribe to auth state on boot
+AuthManager.onAuthStateChange((user) => {
+  updateAuthUI(user);
+});

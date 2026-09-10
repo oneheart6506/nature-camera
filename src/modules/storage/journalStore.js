@@ -38,7 +38,9 @@ export class JournalStore {
         aspectRatio: entry.aspectRatio || '4:3',
         frame: entry.frame || 'none',
         timestamp: entry.timestamp || Date.now(),
-        caption: entry.caption || ''
+        caption: entry.caption || '',
+        cloudUrl: entry.cloudUrl || null,
+        publicId: entry.publicId || null
       };
 
       const request = store.put(record);
@@ -46,6 +48,32 @@ export class JournalStore {
       request.onsuccess = () => resolve(record);
       request.onerror = () => reject(request.error);
 
+      tx.oncomplete = () => db.close();
+    });
+  }
+
+  static async updateObservationCloudData(id, cloudData) {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const getReq = store.get(id);
+
+      getReq.onsuccess = () => {
+        const record = getReq.result;
+        if (!record) {
+          reject(new Error(`Record ${id} not found.`));
+          return;
+        }
+        record.cloudUrl = cloudData.cloudUrl;
+        record.publicId = cloudData.publicId;
+
+        const updateReq = store.put(record);
+        updateReq.onsuccess = () => resolve(record);
+        updateReq.onerror = () => reject(updateReq.error);
+      };
+
+      getReq.onerror = () => reject(getReq.error);
       tx.oncomplete = () => db.close();
     });
   }
@@ -75,9 +103,6 @@ export class JournalStore {
     });
   }
 
-  /**
-   * Permanently deletes a single observation record and its photo blob.
-   */
   static async deleteObservation(id) {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
