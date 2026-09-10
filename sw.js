@@ -2,7 +2,7 @@
  * sw.js - Service Worker for Nature Camera
  * Provides offline App Shell caching and instantaneous boots.
  */
-const CACHE_NAME = 'nature-cam-v1.2'; // Changed from v1.1
+const CACHE_NAME = 'nature-cam-v1.3'; // BUMP TO v1.3
 
 const APP_SHELL = [
   '/',
@@ -17,14 +17,21 @@ const APP_SHELL = [
   '/src/styles/components/camera.css',
   '/src/styles/components/toast.css',
   '/src/styles/components/gallery.css',
+  '/src/styles/components/auth.css',
   '/src/modules/camera/cameraEngine.js',
   '/src/modules/canvas/frameRenderer.js',
   '/src/modules/storage/journalStore.js',
+  '/src/modules/storage/cloudinaryUploader.js',
+  '/src/modules/storage/cloudJournal.js',
+  '/src/modules/auth/authManager.js',
   '/src/constants/aspectRatios.js',
   '/src/constants/filters.js',
   '/src/constants/frames.js',
-  '/src/constants/categories.js'
+  '/src/constants/categories.js',
+  '/src/constants/cloudinary.js',
+  '/src/constants/firebase.js'
 ];
+
 
 // 1. INSTALL: Pre-cache the App Shell
 self.addEventListener('install', (event) => {

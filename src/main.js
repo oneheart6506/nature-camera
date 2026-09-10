@@ -341,16 +341,16 @@ function openDetailModal(record, thumbUrl) {
     detailCaption.classList.add('hidden');
   }
 
-  // Update Cloud Sync Button state
-  if (record.cloudUrl) {
+  // Allow syncing if not yet in Firestore, or re-syncing if needed
+  if (record.syncedToFirestore) {
     btnCloudSync.classList.add('synced');
     syncIcon.textContent = '✓';
-    syncStatus.textContent = 'Backed up on Cloud';
+    syncStatus.textContent = 'Synced to Cloud';
     btnCloudSync.disabled = true;
   } else {
     btnCloudSync.classList.remove('synced');
     syncIcon.textContent = '☁️';
-    syncStatus.textContent = 'Backup to Cloud';
+    syncStatus.textContent = record.cloudUrl ? 'Sync to Database' : 'Backup to Cloud';
     btnCloudSync.disabled = false;
   }
 
@@ -522,29 +522,28 @@ btnDeleteEntry.addEventListener('click', async () => {
 });
 
 
-// Upload local photo blob directly to Cloudinary
-// Dual Cloud Sync: Upload pixels to Cloudinary -> Write metadata to Firestore
+// Dual Cloud Sync: Cloudinary Pixels -> Firestore Document
 btnCloudSync.addEventListener('click', async () => {
   if (!activeInspectionRecord) return;
 
-  // 1. Guard: User must be signed in to sync metadata to cloud
   const user = AuthManager.getCurrentUser();
   if (!user) {
-    showToast('Sign in to backup observations');
+    showToast('Please sign in first');
     openAuthModal();
     return;
   }
 
   btnCloudSync.disabled = true;
-  syncIcon.textContent = '⏳';
-  syncStatus.textContent = 'Uploading...';
 
   try {
     let cloudUrl = activeInspectionRecord.cloudUrl;
     let publicId = activeInspectionRecord.publicId;
 
-    // Step A: Upload image to Cloudinary if not already uploaded
+    // Step 1: Upload image to Cloudinary if it hasn't been uploaded yet
     if (!cloudUrl && activeInspectionRecord.photoBlob) {
+      syncIcon.textContent = '⏳';
+      syncStatus.textContent = 'Uploading image...';
+
       const uploadResult = await CloudinaryUploader.uploadPhoto(activeInspectionRecord.photoBlob, [
         'nature-journal',
         activeInspectionRecord.category || 'general'
@@ -557,20 +556,23 @@ btnCloudSync.addEventListener('click', async () => {
       activeInspectionRecord.publicId = publicId;
     }
 
-    // Step B: Write observation metadata to Cloud Firestore
+    // Step 2: Write metadata to Cloud Firestore
+    syncIcon.textContent = '📡';
     syncStatus.textContent = 'Syncing...';
+
     await CloudJournal.syncObservation(user.uid, activeInspectionRecord);
 
+    activeInspectionRecord.syncedToFirestore = true;
     btnCloudSync.classList.add('synced');
     syncIcon.textContent = '✓';
     syncStatus.textContent = 'Synced to Cloud';
-    showToast('Observation safely synced to Cloud!');
+    showToast('Observation written to Firestore!');
   } catch (err) {
-    console.error('Cloud synchronization error:', err);
+    console.error('Sync failed:', err);
     btnCloudSync.disabled = false;
     syncIcon.textContent = '⚠️';
     syncStatus.textContent = 'Sync Failed';
-    showToast(err.message || 'Sync failed');
+    showToast(`Error: ${err.message || 'Database write rejected'}`);
   }
 });
 

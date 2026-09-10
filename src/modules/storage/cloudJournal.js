@@ -1,18 +1,13 @@
 /**
- * cloudJournal.js - Cloud Firestore synchronization engine for nature observations.
+ * cloudJournal.js - Cloud Firestore synchronization engine.
  */
-import { initializeApp, getApp } from 'firebase/app';
 import {
-  getFirestore,
   doc,
   setDoc,
   deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
-
-// Reuse initialized Firebase App instance
-const app = getApp();
-const db = getFirestore(app);
+import { db } from '../../constants/firebase.js';
 
 export class CloudJournal {
   /**
@@ -23,7 +18,6 @@ export class CloudJournal {
       throw new Error('User must be authenticated to sync with cloud.');
     }
 
-    // Document reference: users/{userId}/observations/{observationId}
     const docRef = doc(db, 'users', userId, 'observations', record.id);
 
     const cloudPayload = {
@@ -33,8 +27,8 @@ export class CloudJournal {
       filter: record.filter || 'natural',
       aspectRatio: record.aspectRatio || '4:3',
       frame: record.frame || 'none',
-      cloudUrl: record.cloudUrl,
-      publicId: record.publicId,
+      cloudUrl: record.cloudUrl || null,
+      publicId: record.publicId || null,
       capturedAt: record.timestamp,
       syncedAt: serverTimestamp()
     };
@@ -43,14 +37,11 @@ export class CloudJournal {
       await setDoc(docRef, cloudPayload, { merge: true });
       return cloudPayload;
     } catch (error) {
-      console.error('Firestore sync failed:', error);
+      console.error('Firestore setDoc failed:', error);
       throw error;
     }
   }
 
-  /**
-   * Deletes an observation document from Cloud Firestore.
-   */
   static async deleteFromCloud(userId, observationId) {
     if (!userId || !observationId) return;
 
