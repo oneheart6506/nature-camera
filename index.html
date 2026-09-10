@@ -179,10 +179,18 @@
       </section>
 
       <section id="detail-modal" class="detail-modal hidden">
-        <header class="detail-header">
+                <header class="detail-header">
           <span id="detail-date" class="obs-meta-time"></span>
-          <button id="btn-close-detail" class="btn-pill">Close</button>
+          <div class="hud-actions">
+            <!-- Share / Export Plate Action -->
+            <button id="btn-export-plate" class="btn-pill" aria-label="Export Plate">
+              <span>↗</span>
+              <span>Export</span>
+            </button>
+            <button id="btn-close-detail" class="btn-pill">Close</button>
+          </div>
         </header>
+
 
         <div class="detail-body">
           <img id="detail-image" alt="Full view nature observation" />

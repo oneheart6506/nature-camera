@@ -1,7 +1,7 @@
 /**
  * sw.js - Network-First for HTML/Code, Cache-Fallback for Offline
  */
-const CACHE_NAME = 'nature-cam-v3.3';
+const CACHE_NAME = 'nature-cam-v3.5';
 
 const APP_SHELL = [
   '/',
@@ -20,6 +20,7 @@ const APP_SHELL = [
   '/src/styles/components/auth.css',
   '/src/modules/camera/cameraEngine.js',
   '/src/modules/canvas/frameRenderer.js',
+  '/src/modules/canvas/postcardRenderer.js',
   '/src/modules/storage/journalStore.js',
   '/src/modules/storage/cloudinaryUploader.js',
   '/src/modules/storage/cloudJournal.js',

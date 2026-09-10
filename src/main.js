@@ -8,6 +8,8 @@ import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from './constants/aspectRatios.js
 import { NATURE_FILTERS, DEFAULT_FILTER_ID } from './constants/filters.js';
 import { NATURE_FRAMES, DEFAULT_FRAME_ID } from './constants/frames.js';
 import { NATURE_CATEGORIES, DEFAULT_CATEGORY_ID } from './constants/categories.js';
+import { PostcardRenderer } from './modules/canvas/postcardRenderer.js';
+
 
 // DOM Elements - Camera Viewfinder & HUD
 const videoElement = document.getElementById('camera-video');
@@ -91,6 +93,9 @@ const btnLogout = document.getElementById('btn-logout');
 
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const themeIcon = document.getElementById('theme-icon');
+
+const btnExportPlate = document.getElementById('btn-export-plate');
+
 
 
 // App State
@@ -1598,6 +1603,64 @@ btnResonate?.addEventListener(
     }
   }
 );
+
+// ---------------- ARCHIVAL PLATE EXPORT & NATIVE SHARE ----------------
+
+btnExportPlate?.addEventListener('click', async () => {
+  if (!activeInspectionRecord) return;
+
+  btnExportPlate.disabled = true;
+  const originalText = btnExportPlate.innerHTML;
+  btnExportPlate.innerHTML = '<span>⏳</span><span>Printing...</span>';
+
+  try {
+    const imageSrc = activeInspectionRecord.cloudUrl || activeInspectionRecord.photoBlob;
+    if (!imageSrc) throw new Error('Image source missing');
+
+    const plateBlob = await PostcardRenderer.createFieldPlate(imageSrc, {
+      category: activeInspectionRecord.category,
+      caption: activeInspectionRecord.caption,
+      timestamp: activeInspectionRecord.capturedAt || activeInspectionRecord.timestamp,
+      aspectRatio: activeInspectionRecord.aspectRatio,
+      filter: activeInspectionRecord.filter,
+      authorName: activeInspectionRecord.authorName || (currentUser ? currentUser.email.split('@')[0] : null)
+    });
+
+    const file = new File([plateBlob], `field-plate-${activeInspectionRecord.id}.jpg`, {
+      type: 'image/jpeg'
+    });
+
+    // Native Android Web Share Sheet
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Nature Observation',
+        text: activeInspectionRecord.caption || 'Field observation recorded with Nature Camera.'
+      });
+      showToast('Shared successfully');
+    } else {
+      // Direct Download Fallback
+      const downloadUrl = URL.createObjectURL(plateBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `field-plate-${activeInspectionRecord.id}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      showToast('Field plate saved to device');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Export failure:', err);
+      showToast('Failed to generate export');
+    }
+  } finally {
+    btnExportPlate.disabled = false;
+    btnExportPlate.innerHTML = originalText;
+  }
+});
+
 
 // ---------------- DUAL CLOUD SYNC ----------------
 
