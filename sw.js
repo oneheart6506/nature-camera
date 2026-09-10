@@ -1,7 +1,7 @@
 /**
  * sw.js - Network-First for HTML/Code, Cache-Fallback for Offline
  */
-const CACHE_NAME = 'nature-cam-v3.1';
+const CACHE_NAME = 'nature-cam-v3.2';
 
 const APP_SHELL = [
   '/',
